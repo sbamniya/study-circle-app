@@ -9,31 +9,10 @@ import {
 } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { Feather } from '@expo/vector-icons';
+import { useQueries, useQueryClient } from '@tanstack/react-query';
 import * as React from 'react';
 import { Alert, RefreshControl, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
-type DashboardState = {
-  studyMaterialsCount: number;
-  examMaterialsCount: number;
-  quizzesCount: number;
-  studyCirclesCount: number;
-  todayCheckIn: { id: string } | null;
-  chartData: DashboardCheckInChartPoint[];
-  streak: DashboardStreak | null;
-  recentActivity: DashboardRecentActivityItem[];
-};
-
-const INITIAL_DASHBOARD_STATE: DashboardState = {
-  studyMaterialsCount: 0,
-  examMaterialsCount: 0,
-  quizzesCount: 0,
-  studyCirclesCount: 0,
-  todayCheckIn: null,
-  chartData: [],
-  streak: null,
-  recentActivity: [],
-};
 
 function getDateRange(days: number) {
   const endDate = new Date();
@@ -72,102 +51,116 @@ function getCurrentStreak(streak: DashboardStreak | null) {
 
 export default function HomeScreen() {
   const { token, user } = useAuth();
-  const [dashboard, setDashboard] = React.useState<DashboardState>(INITIAL_DASHBOARD_STATE);
-  const [isLoading, setIsLoading] = React.useState(true);
-  const [isRefreshing, setIsRefreshing] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
+  const queryClient = useQueryClient();
+  const { startDate, endDate } = React.useMemo(() => getDateRange(7), []);
 
-  const loadDashboard = React.useCallback(async () => {
-    if (!token) {
-      return;
-    }
+  const dashboardQueries = useQueries({
+    queries: [
+      {
+        queryKey: ['dashboard', 'count', 'study-materials', token],
+        queryFn: async () => dashboardApi.getStudyMaterialsCount(token as string),
+        enabled: Boolean(token),
+      },
+      {
+        queryKey: ['dashboard', 'count', 'exam-materials', token],
+        queryFn: async () => dashboardApi.getExamMaterialsCount(token as string),
+        enabled: Boolean(token),
+      },
+      {
+        queryKey: ['dashboard', 'count', 'quizzes', token],
+        queryFn: async () => dashboardApi.getQuizzesCount(token as string),
+        enabled: Boolean(token),
+      },
+      {
+        queryKey: ['dashboard', 'count', 'study-circles', token],
+        queryFn: async () => dashboardApi.getStudyCirclesCount(token as string),
+        enabled: Boolean(token),
+      },
+      {
+        queryKey: ['dashboard', 'today-checkin', token],
+        queryFn: async () => dashboardApi.getTodayCheckIn(token as string),
+        enabled: Boolean(token),
+      },
+      {
+        queryKey: ['dashboard', 'chart-data', token, startDate, endDate],
+        queryFn: async () => dashboardApi.getChartData(token as string, { startDate, endDate }),
+        enabled: Boolean(token),
+      },
+      {
+        queryKey: ['dashboard', 'streak', token],
+        queryFn: async () => dashboardApi.getStreak(token as string),
+        enabled: Boolean(token),
+      },
+      {
+        queryKey: ['dashboard', 'recent-activity', token],
+        queryFn: async () => dashboardApi.getRecentActivity(token as string),
+        enabled: Boolean(token),
+      },
+    ],
+  });
 
-    setError(null);
+  const [
+    studyMaterialsQuery,
+    examMaterialsQuery,
+    quizzesQuery,
+    studyCirclesQuery,
+    todayCheckInQuery,
+    chartDataQuery,
+    streakQuery,
+    recentActivityQuery,
+  ] = dashboardQueries;
 
-    try {
-      const { startDate, endDate } = getDateRange(7);
-      const [
-        studyMaterialsCount,
-        examMaterialsCount,
-        quizzesCount,
-        studyCirclesCount,
-        todayCheckIn,
-        chartData,
-        streak,
-        recentActivity,
-      ] = await Promise.all([
-        dashboardApi.getStudyMaterialsCount(token),
-        dashboardApi.getExamMaterialsCount(token),
-        dashboardApi.getQuizzesCount(token),
-        dashboardApi.getStudyCirclesCount(token),
-        dashboardApi.getTodayCheckIn(token),
-        dashboardApi.getChartData(token, { startDate, endDate }),
-        dashboardApi.getStreak(token),
-        dashboardApi.getRecentActivity(token),
-      ]);
-
-      setDashboard({
-        studyMaterialsCount,
-        examMaterialsCount,
-        quizzesCount,
-        studyCirclesCount,
-        todayCheckIn,
-        chartData,
-        streak,
-        recentActivity,
-      });
-    } catch {
-      setError('Unable to load dashboard right now. Pull down to retry.');
-    } finally {
-      setIsLoading(false);
-      setIsRefreshing(false);
-    }
-  }, [token]);
-
-  React.useEffect(() => {
-    void loadDashboard();
-  }, [loadDashboard]);
+  const isLoading = dashboardQueries.some((query) => query.isLoading);
+  const isRefreshing = dashboardQueries.some((query) => query.isRefetching);
+  const hasAnyError = dashboardQueries.some((query) => query.isError);
+  const error = hasAnyError ? 'Unable to load dashboard right now. Pull down to retry.' : null;
 
   const onRefresh = React.useCallback(() => {
-    setIsRefreshing(true);
-    void loadDashboard();
-  }, [loadDashboard]);
+    void queryClient.refetchQueries({ queryKey: ['dashboard'], type: 'active' });
+  }, [queryClient]);
 
-  const hasCheckedIn = Boolean(dashboard.todayCheckIn);
-  const chartData = dashboard.chartData;
+  const studyMaterialsCount = studyMaterialsQuery.data ?? 0;
+  const examMaterialsCount = examMaterialsQuery.data ?? 0;
+  const quizzesCount = quizzesQuery.data ?? 0;
+  const studyCirclesCount = studyCirclesQuery.data ?? 0;
+  const hasCheckedIn = Boolean(todayCheckInQuery.data);
+  const chartData: DashboardCheckInChartPoint[] = chartDataQuery.data ?? [];
+  const streak: DashboardStreak | null = streakQuery.data ?? null;
+  const recentActivity: DashboardRecentActivityItem[] = recentActivityQuery.data ?? [];
+
   const totalTasks = chartData.reduce((sum, item) => sum + item.tasksCompleted, 0);
   const totalHours = chartData.reduce((sum, item) => sum + item.hoursStudied, 0);
   const daysWithCheckins = chartData.filter((item) => item.hasCheckin).length;
   const totalDays = chartData.length;
   const checkInRate = totalDays > 0 ? Math.round((daysWithCheckins / totalDays) * 100) : 0;
   const avgTasks = daysWithCheckins > 0 ? Number((totalTasks / daysWithCheckins).toFixed(1)) : 0;
-  const currentStreak = getCurrentStreak(dashboard.streak);
-  const bestStreak = dashboard.streak?.bestStreak ?? 0;
+  const currentStreak = getCurrentStreak(streak);
+  const bestStreak = streak?.bestStreak ?? 0;
   const progressToBest = bestStreak > 0 ? Math.min((currentStreak / bestStreak) * 100, 100) : 0;
 
   const statCards = [
     {
       id: 'study-materials',
       title: 'Uploaded Study Materials',
-      value: dashboard.studyMaterialsCount,
+      value: studyMaterialsCount,
       hint: 'Study materials uploaded by you',
     },
     {
       id: 'exam-materials',
       title: 'Uploaded Exam Materials',
-      value: dashboard.examMaterialsCount,
+      value: examMaterialsCount,
       hint: 'Exam materials uploaded by you',
     },
     {
       id: 'quizzes',
       title: 'Available Quizzes',
-      value: dashboard.quizzesCount,
+      value: quizzesCount,
       hint: 'Quizzes created by StudyCircleAI for you',
     },
     {
       id: 'study-circles',
       title: 'Study Circles Joined',
-      value: dashboard.studyCirclesCount,
+      value: studyCirclesCount,
       hint: 'Circles you are a member of',
     },
   ];
@@ -360,10 +353,10 @@ export default function HomeScreen() {
                   <Text className="text-muted-foreground text-base">Recent Activity</Text>
                 </View>
 
-                {dashboard.recentActivity.length === 0 ? (
+                {recentActivity.length === 0 ? (
                   <Text className="text-muted-foreground py-4 text-center">No recent activity found</Text>
                 ) : (
-                  dashboard.recentActivity.slice(0, 5).map((activity) => (
+                  recentActivity.slice(0, 5).map((activity) => (
                     <View
                       key={activity.id}
                       className="bg-muted/60 flex-row items-center justify-between rounded-md p-2">

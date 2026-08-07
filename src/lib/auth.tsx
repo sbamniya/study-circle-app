@@ -1,9 +1,13 @@
 import { authApi, type AuthResponse, type LoginPayload, type SignupPayload, type User } from '@/lib/api';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as SecureStore from 'expo-secure-store';
 import * as React from 'react';
 import { Platform } from 'react-native';
 
 const TOKEN_KEY = 'studycircle.auth_token';
+const AUTH_QUERY_KEYS = {
+  me: (token: string) => ['auth', 'me', token] as const,
+};
 
 type AuthContextValue = {
   isLoading: boolean;
@@ -52,7 +56,8 @@ async function deleteStoredToken() {
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [isLoading, setIsLoading] = React.useState(true);
+  const queryClient = useQueryClient();
+  const [isRestoringSession, setIsRestoringSession] = React.useState(true);
   const [token, setToken] = React.useState<string | null>(null);
   const [user, setUser] = React.useState<User | null>(null);
 
@@ -60,7 +65,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await setStoredToken(response.token);
     setToken(response.token);
     setUser(response.user);
-  }, []);
+    queryClient.setQueryData(AUTH_QUERY_KEYS.me(response.token), response.user);
+  }, [queryClient]);
+
+  const meQuery = useQuery({
+    queryKey: token ? AUTH_QUERY_KEYS.me(token) : ['auth', 'me', 'anonymous'],
+    queryFn: async () => authApi.me(token as string),
+    enabled: Boolean(token) && !isRestoringSession,
+    retry: 1,
+  });
+
+  React.useEffect(() => {
+    if (!meQuery.isError || !token) {
+      return;
+    }
+
+    async function clearInvalidSession() {
+      await deleteStoredToken();
+      setToken(null);
+      setUser(null);
+    }
+
+    void clearInvalidSession();
+  }, [meQuery.isError, token]);
 
   React.useEffect(() => {
     let mounted = true;
@@ -69,21 +96,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         const storedToken = await getStoredToken();
 
-        if (!storedToken) {
-          return;
-        }
-
-        const currentUser = await authApi.me(storedToken);
-
-        if (mounted) {
+        if (mounted && storedToken) {
           setToken(storedToken);
-          setUser(currentUser);
         }
       } catch {
         await deleteStoredToken();
       } finally {
         if (mounted) {
-          setIsLoading(false);
+          setIsRestoringSession(false);
         }
       }
     }
@@ -95,42 +115,89 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
+  const signInMutation = useMutation({
+    mutationFn: authApi.login,
+    onSuccess: async (response) => {
+      await applyAuthResponse(response);
+    },
+  });
+
+  const signUpMutation = useMutation({
+    mutationFn: authApi.signup,
+  });
+
+  const verifyEmailMutation = useMutation({
+    mutationFn: authApi.verifyEmail,
+    onSuccess: async (response) => {
+      await applyAuthResponse(response);
+    },
+  });
+
+  const resendVerificationMutation = useMutation({
+    mutationFn: authApi.resendVerification,
+  });
+
+  const forgotPasswordMutation = useMutation({
+    mutationFn: authApi.forgotPassword,
+  });
+
+  const resetPasswordMutation = useMutation({
+    mutationFn: authApi.resetPassword,
+    onSuccess: async (response) => {
+      await applyAuthResponse(response);
+    },
+  });
+
+  const isLoading = isRestoringSession || (Boolean(token) && meQuery.isLoading);
+  const resolvedUser = user ?? meQuery.data ?? null;
+
   const value = React.useMemo<AuthContextValue>(
     () => ({
       isLoading,
       token,
-      user,
+      user: resolvedUser,
       async signIn(payload) {
-        const response = await authApi.login(payload);
-        await applyAuthResponse(response);
+        await signInMutation.mutateAsync(payload);
       },
       async signUp(payload) {
-        const response = await authApi.signup(payload);
+        const response = await signUpMutation.mutateAsync(payload);
         return response.message ?? 'Please check your email for verification code';
       },
       async verifyEmail(payload) {
-        const response = await authApi.verifyEmail(payload);
-        await applyAuthResponse(response);
+        await verifyEmailMutation.mutateAsync(payload);
       },
       async resendVerification(email) {
-        const response = await authApi.resendVerification(email);
+        const response = await resendVerificationMutation.mutateAsync(email);
         return response.message ?? 'Verification code sent successfully';
       },
       async forgotPassword(email) {
-        const response = await authApi.forgotPassword(email);
+        const response = await forgotPasswordMutation.mutateAsync(email);
         return response.message ?? 'Verification code sent successfully';
       },
       async resetPassword(payload) {
-        const response = await authApi.resetPassword(payload);
-        await applyAuthResponse(response);
+        await resetPasswordMutation.mutateAsync(payload);
       },
       async signOut() {
         await deleteStoredToken();
+        if (token) {
+          queryClient.removeQueries({ queryKey: AUTH_QUERY_KEYS.me(token) });
+        }
         setToken(null);
         setUser(null);
       },
     }),
-    [applyAuthResponse, isLoading, token, user]
+    [
+      forgotPasswordMutation,
+      isLoading,
+      queryClient,
+      resendVerificationMutation,
+      resolvedUser,
+      resetPasswordMutation,
+      signInMutation,
+      signUpMutation,
+      token,
+      verifyEmailMutation,
+    ]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

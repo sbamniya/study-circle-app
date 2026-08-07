@@ -2,9 +2,10 @@ import "../global.css";
 
 import { AnimatedSplashOverlay } from "@/components/animated-icon";
 import { AuthProvider } from "@/lib/auth";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useColorScheme, useWindowDimensions } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Uniwind } from "uniwind";
@@ -60,6 +61,17 @@ Uniwind.updateCSSVariables("dark", DARK_THEME_VARS);
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
+  const [queryClient] = useState(
+    () =>
+      new QueryClient({
+        defaultOptions: {
+          queries: {
+            staleTime: 1000 * 60,
+            retry: 1,
+          },
+        },
+      }),
+  );
 
   const { height } = useWindowDimensions();
   useEffect(() => {
@@ -75,20 +87,22 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
-      <AuthProvider>
-        <AnimatedSplashOverlay />
-        <SafeAreaView
-          className="bg-background flex-1"
-          style={{
-            height,
-          }}
-        >
-          <Stack screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="(auth)" />
-            <Stack.Screen name="(tabs)" />
-          </Stack>
-        </SafeAreaView>
-      </AuthProvider>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <AnimatedSplashOverlay />
+          <SafeAreaView
+            className="bg-background flex-1"
+            style={{
+              height,
+            }}
+          >
+            <Stack screenOptions={{ headerShown: false }}>
+              <Stack.Screen name="(auth)" />
+              <Stack.Screen name="(tabs)" />
+            </Stack>
+          </SafeAreaView>
+        </AuthProvider>
+      </QueryClientProvider>
     </ThemeProvider>
   );
 }
