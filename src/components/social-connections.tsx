@@ -1,7 +1,6 @@
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { useColorScheme } from 'nativewind';
-import { Image, Platform, View } from 'react-native';
+import { Image, Platform, useColorScheme, View } from 'react-native';
 
 const SOCIAL_CONNECTION_STRATEGIES = [
   {
@@ -22,7 +21,7 @@ const SOCIAL_CONNECTION_STRATEGIES = [
 ];
 
 export function SocialConnections() {
-  const { colorScheme } = useColorScheme();
+  const colorScheme = useColorScheme();
 
   return (
     <View className="gap-2 sm:flex-row sm:gap-3">
