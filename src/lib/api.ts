@@ -48,6 +48,32 @@ export type MessageResponse = {
   message: string;
 };
 
+export type PaginatedApiResponse = {
+  data: unknown[];
+  pagination: {
+    totalItems: number;
+  };
+};
+
+export type DashboardCheckInChartPoint = {
+  date: string;
+  tasksCompleted: number;
+  hoursStudied: number;
+  hasCheckin: boolean;
+};
+
+export type DashboardStreak = {
+  currentStreak: number;
+  bestStreak: number;
+  lastCheckinDate: string | null;
+};
+
+export type DashboardRecentActivityItem = {
+  id: string;
+  date: string;
+  mood?: string;
+};
+
 export class ApiError extends Error {
   status: number;
   data: unknown;
@@ -147,5 +173,54 @@ export const authApi = {
     confirmPassword: string;
   }) {
     return request<AuthResponse>('/auth/reset-password', { method: 'POST', body: payload });
+  },
+};
+
+function getTotalItems(payload: PaginatedApiResponse | null) {
+  return payload?.pagination?.totalItems ?? 0;
+}
+
+export const dashboardApi = {
+  async getStudyMaterialsCount(token: string) {
+    const data = await request<PaginatedApiResponse>('/study-materials?page=1&limit=1', { token });
+    return getTotalItems(data);
+  },
+  async getExamMaterialsCount(token: string) {
+    const data = await request<PaginatedApiResponse>('/exam-papers?page=1&limit=1', { token });
+    return getTotalItems(data);
+  },
+  async getQuizzesCount(token: string) {
+    const data = await request<PaginatedApiResponse>('/quizzes?page=1&limit=1', { token });
+    return getTotalItems(data);
+  },
+  async getStudyCirclesCount(token: string) {
+    const data = await request<PaginatedApiResponse>('/study-circles?page=1&limit=1', { token });
+    return getTotalItems(data);
+  },
+  async getTodayCheckIn(token: string) {
+    try {
+      return await request<{ id: string } | null>('/check-ins/today', { token });
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 404) {
+        return null;
+      }
+      throw error;
+    }
+  },
+  async getChartData(
+    token: string,
+    params: {
+      startDate: string;
+      endDate: string;
+    }
+  ) {
+    const query = new URLSearchParams(params).toString();
+    return request<DashboardCheckInChartPoint[]>(`/check-ins/chart-data?${query}`, { token });
+  },
+  async getStreak(token: string) {
+    return request<DashboardStreak>('/check-ins/streak', { token });
+  },
+  async getRecentActivity(token: string) {
+    return request<DashboardRecentActivityItem[]>('/check-ins/recent-activity', { token });
   },
 };

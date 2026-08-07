@@ -5,7 +5,8 @@ import { AuthProvider } from "@/lib/auth";
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
-import { useColorScheme } from "react-native";
+import { useColorScheme, useWindowDimensions } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Uniwind } from "uniwind";
 
 SplashScreen.preventAutoHideAsync();
@@ -60,6 +61,7 @@ Uniwind.updateCSSVariables("dark", DARK_THEME_VARS);
 export default function RootLayout() {
   const colorScheme = useColorScheme();
 
+  const { height } = useWindowDimensions();
   useEffect(() => {
     // Keep utility-based theming and semantic CSS variables in sync with RN appearance.
     Uniwind.setTheme(
@@ -75,10 +77,17 @@ export default function RootLayout() {
     <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
       <AuthProvider>
         <AnimatedSplashOverlay />
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="(auth)" />
-          <Stack.Screen name="(tabs)" />
-        </Stack>
+        <SafeAreaView
+          className="bg-background flex-1"
+          style={{
+            height,
+          }}
+        >
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="(auth)" />
+            <Stack.Screen name="(tabs)" />
+          </Stack>
+        </SafeAreaView>
       </AuthProvider>
     </ThemeProvider>
   );
