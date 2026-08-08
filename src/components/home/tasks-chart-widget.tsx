@@ -15,7 +15,7 @@ import { useAuth } from '@/lib/auth';
 import { Feather } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import * as React from 'react';
-import { Alert, View } from 'react-native';
+import { Alert, ScrollView, View } from 'react-native';
 import { BarChart } from 'react-native-gifted-charts';
 
 function getDateRange(days: number) {
@@ -75,24 +75,32 @@ export function TasksChartWidget({
   const totalTasks = chartData.reduce((sum, item) => sum + item.tasksCompleted, 0);
   const totalHours = chartData.reduce((sum, item) => sum + item.hoursStudied, 0);
   const daysWithCheckins = chartData.filter((item) => item.hasCheckin).length;
+  const hasTrackedValues = totalTasks > 0 || totalHours > 0;
   const totalDays = chartData.length;
   const checkInRate = totalDays > 0 ? Math.round((daysWithCheckins / totalDays) * 100) : 0;
   const avgTasks = daysWithCheckins > 0 ? Number((totalTasks / daysWithCheckins).toFixed(1)) : 0;
   const avgHours = daysWithCheckins > 0 ? Number((totalHours / daysWithCheckins).toFixed(1)) : 0;
 
-  const visibleChartData = chartData.slice(-10);
+  const visibleChartData = chartData;
   const maxTasks = Math.max(...visibleChartData.map((item) => item.tasksCompleted), 1);
   const maxHours = Math.max(...visibleChartData.map((item) => item.hoursStudied), 1);
+  const labelStep = visibleChartData.length <= 10 ? 1 : visibleChartData.length <= 31 ? 5 : 10;
   const barData = visibleChartData.map((item, index) => {
     const labelDate = new Date(item.date);
-    const shortLabel = labelDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    const shortLabel =
+      selectedDays <= 7
+        ? labelDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+        : labelDate.toLocaleDateString(undefined, { day: 'numeric' });
     return {
       value: item.tasksCompleted,
       frontColor: '#f97316',
-      label: visibleChartData.length > 7 && index % 2 === 1 ? '' : shortLabel,
+      labelWidth: selectedDays <= 7 ? 38 : 24,
+      label: index % labelStep === 0 || index === visibleChartData.length - 1 ? shortLabel : '',
     };
   });
   const lineData = visibleChartData.map((item) => ({ value: item.hoursStudied }));
+  const secondaryMaxValue = Math.max(maxHours, 1);
+  const chartWidth = Math.max(320, visibleChartData.length * 28 + 48);
 
   const handleCheckIn =
     onCheckIn ?? (() => Alert.alert('Check-in', 'Check-in flow will be available in the mobile app soon.'));
@@ -101,10 +109,10 @@ export function TasksChartWidget({
     <Card className="gap-4 py-4">
       <CardHeader className="gap-2 px-4">
         <View className="w-full gap-2">
-          <CardTitle className="flex-row items-center gap-2 text-xl">
+          <View className="flex-row items-center gap-2">
             <Feather name="check-square" size={18} color="#a3a3a3" />
-            <Text className="text-xl font-semibold">Tasks vs Study Hours</Text>
-          </CardTitle>
+            <CardTitle className="text-xl">Tasks vs Study Hours</CardTitle>
+          </View>
           <CardDescription className="text-sm">
             Daily task completion (columns) and study hours (area) from check-ins
           </CardDescription>
@@ -167,7 +175,20 @@ export function TasksChartWidget({
           </View>
         ) : null}
 
-        {!isLoading && !error && daysWithCheckins > 0 ? (
+        {!isLoading && !error && daysWithCheckins > 0 && !hasTrackedValues ? (
+          <View className="items-center py-8">
+            <View className="bg-muted mb-5 h-20 w-20 items-center justify-center rounded-full">
+              <Feather name="bar-chart-2" size={34} color="#9ca3af" />
+            </View>
+            <Text className="text-center text-2xl font-bold">No chartable values yet</Text>
+            <Text className="text-muted-foreground mt-3 text-center text-base">
+              You have check-ins in this range, but study hours and task counts are 0. Add your numbers in
+              upcoming check-ins to see the chart plot.
+            </Text>
+          </View>
+        ) : null}
+
+        {!isLoading && !error && daysWithCheckins > 0 && hasTrackedValues ? (
           <View className="gap-4">
             <View className="mb-1 flex-row gap-3">
               <View className="flex-1 gap-3">
@@ -213,62 +234,85 @@ export function TasksChartWidget({
               </View>
 
               <View className="bg-muted/20 border-border rounded-lg border px-2 py-3">
-                <BarChart
-                  data={barData}
-                  lineData={lineData}
-                  showLine
-                  lineConfig={{
-                    isSecondary: true,
-                    color: '#06b6d4',
-                    thickness: 2,
-                    curved: true,
-                    dataPointsColor: '#06b6d4',
-                    dataPointsRadius: 3,
-                    hideDataPoints: false,
-                  }}
-                  secondaryYAxis={{
-                    maxValue: Math.max(maxHours, 1),
-                    noOfSections: 4,
-                    yAxisOffset: 0,
-                  }}
-                  height={220}
-                  barWidth={16}
-                  spacing={18}
-                  initialSpacing={10}
-                  endSpacing={10}
-                  roundedTop
-                  hideRules={false}
-                  rulesColor="rgba(115,115,115,0.25)"
-                  rulesType="solid"
-                  yAxisThickness={0}
-                  xAxisThickness={0}
-                  yAxisTextStyle={{ color: '#8a8a8a', fontSize: 10 }}
-                  xAxisLabelTextStyle={{ color: '#8a8a8a', fontSize: 10 }}
-                  noOfSections={4}
-                  maxValue={Math.max(maxTasks, 1)}
-                  formatYLabel={(label) => `${Math.round(Number(label))}`}
-                  renderTooltip={(item: { value?: number }, index: number) => {
-                    const activity = visibleChartData[index];
-                    return (
-                      <View className="border-border bg-popover min-w-36 gap-1 rounded-md border px-2 py-1.5">
-                        <Text className="text-xs font-semibold">
-                          {activity
-                            ? new Date(activity.date).toLocaleDateString(undefined, {
-                                month: 'short',
-                                day: 'numeric',
-                                year: 'numeric',
-                              })
-                            : ''}
-                        </Text>
-                        <Text className="text-xs">Tasks: {item.value ?? 0}</Text>
-                        <Text className="text-xs">Hours: {activity?.hoursStudied?.toFixed(1) ?? '0.0'}</Text>
-                        {!activity?.hasCheckin ? (
-                          <Text className="text-muted-foreground text-[10px]">No check-in submitted</Text>
-                        ) : null}
-                      </View>
-                    );
-                  }}
-                />
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingRight: 8 }}>
+                  <BarChart
+                    width={chartWidth}
+                    data={barData}
+                    lineData={lineData}
+                    showLine
+                    lineConfig={{
+                      isSecondary: true,
+                      color: '#06b6d4',
+                      thickness: 2,
+                      curved: true,
+                      dataPointsColor: '#06b6d4',
+                      dataPointsRadius: 3,
+                      hideDataPoints: false,
+                    }}
+                    secondaryYAxis={{
+                      maxValue: secondaryMaxValue,
+                      noOfSections: 4,
+                      yAxisOffset: 0,
+                      yAxisLabelWidth: 44,
+                      yAxisTextStyle: { color: '#22d3ee', fontSize: 10 },
+                      yAxisColor: 'rgba(34,211,238,0.45)',
+                      yAxisThickness: 1,
+                      formatYLabel: (label: string) => {
+                        const numeric = Number(label);
+                        if (!Number.isFinite(numeric)) {
+                          return '0h';
+                        }
+                        return `${numeric.toFixed(1).replace(/\.0$/, '')}h`;
+                      },
+                    }}
+                    height={220}
+                    barWidth={12}
+                    spacing={14}
+                    initialSpacing={10}
+                    endSpacing={24}
+                    roundedTop
+                    hideRules={false}
+                    rulesColor="rgba(115,115,115,0.25)"
+                    rulesType="solid"
+                    yAxisThickness={0}
+                    yAxisLabelWidth={30}
+                    xAxisThickness={1}
+                    yAxisTextStyle={{ color: '#8a8a8a', fontSize: 10 }}
+                    xAxisLabelTextStyle={{ color: '#8a8a8a', fontSize: 10 }}
+                    xAxisTextNumberOfLines={1}
+                    xAxisLabelsHeight={30}
+                    noOfSections={4}
+                    maxValue={Math.max(maxTasks, 1)}
+                    formatYLabel={(label) => {
+                      const numeric = Number(label);
+                      if (!Number.isFinite(numeric)) {
+                        return '0';
+                      }
+                      return maxTasks <= 2 ? numeric.toFixed(1).replace(/\.0$/, '') : `${Math.round(numeric)}`;
+                    }}
+                    renderTooltip={(item: { value?: number }, index: number) => {
+                      const activity = visibleChartData[index];
+                      return (
+                        <View className="border-border bg-popover min-w-36 gap-1 rounded-md border px-2 py-1.5">
+                          <Text className="text-xs font-semibold">
+                            {activity
+                              ? new Date(activity.date).toLocaleDateString(undefined, {
+                                  month: 'short',
+                                  day: 'numeric',
+                                  year: 'numeric',
+                                })
+                              : ''}
+                          </Text>
+                          <Text className="text-xs">Tasks: {item.value ?? 0}</Text>
+                          <Text className="text-xs">Hours: {activity?.hoursStudied?.toFixed(1) ?? '0.0'}</Text>
+                          {!activity?.hasCheckin ? (
+                            <Text className="text-muted-foreground text-[10px]">No check-in submitted</Text>
+                          ) : null}
+                        </View>
+                      );
+                    }}
+                  />
+                </ScrollView>
               </View>
             </View>
           </View>

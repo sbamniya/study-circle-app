@@ -74,6 +74,59 @@ export type DashboardRecentActivityItem = {
   mood?: string;
 };
 
+export type DashboardCheckInMood =
+  | 'GREAT'
+  | 'GOOD'
+  | 'OKAY'
+  | 'STRUGGLING'
+  | 'MOTIVATED'
+  | 'FOCUSED'
+  | 'TIRED'
+  | 'EXCITED';
+
+export type CreateDashboardCheckInPayload = {
+  date: string;
+  studyHours: number;
+  completedTasks: number;
+  mood: DashboardCheckInMood;
+  todayGoals?: string;
+  challenges?: string;
+  notes?: string;
+};
+
+export type DashboardCheckInRecord = {
+  id: string;
+  userId: number;
+  date: string;
+  studyHours: number;
+  completedTasks: number;
+  todayGoals?: string;
+  challenges?: string;
+  mood: DashboardCheckInMood;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type DashboardAIFeedback = {
+  feedbackContent: string;
+  keyInsights: string[];
+  recommendations: string[];
+  encouragement: string;
+};
+
+export type DashboardCheckInDetail = DashboardCheckInRecord & {
+  aiFeedbacks?: DashboardAIFeedback[];
+};
+
+export type CreateDashboardCheckInResponse = {
+  checkIn: DashboardCheckInRecord;
+  streak: {
+    current: number;
+    best: number;
+  };
+};
+
 export class ApiError extends Error {
   status: number;
   data: unknown;
@@ -181,6 +234,13 @@ function getTotalItems(payload: PaginatedApiResponse | null) {
 }
 
 export const dashboardApi = {
+  async createCheckIn(token: string, payload: CreateDashboardCheckInPayload) {
+    return request<CreateDashboardCheckInResponse>('/check-ins', {
+      method: 'POST',
+      token,
+      body: payload,
+    });
+  },
   async getStudyMaterialsCount(token: string) {
     const data = await request<PaginatedApiResponse>('/study-materials?page=1&limit=1', { token });
     return getTotalItems(data);
@@ -206,6 +266,9 @@ export const dashboardApi = {
       }
       throw error;
     }
+  },
+  async getCheckInById(token: string, checkInId: string) {
+    return request<DashboardCheckInDetail>(`/check-ins/${checkInId}`, { token });
   },
   async getChartData(
     token: string,
