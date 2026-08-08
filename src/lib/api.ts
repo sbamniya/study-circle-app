@@ -55,6 +55,61 @@ export type PaginatedApiResponse = {
   };
 };
 
+export type StudyMaterialQuizStatus =
+  | 'PENDING'
+  | 'GENERATING'
+  | 'GENERATED'
+  | 'GENERATION_FAILED';
+
+export type StudyMaterialStatus =
+  | 'PENDING'
+  | 'PROCESSING'
+  | 'PROCESSED'
+  | 'PROCESSING_FAILED'
+  | 'GENERATING_NOTES'
+  | 'NOTES_GENERATED'
+  | 'NOTES_GENERATION_FAILED'
+  | 'ARCHIVED';
+
+export type StudyMaterialFile = {
+  id: string;
+  fileName: string;
+  status: StudyMaterialStatus;
+  quizStatus: StudyMaterialQuizStatus;
+  errorMessage: string | null;
+};
+
+export type StudyMaterial = {
+  id: string;
+  title: string;
+  description: string;
+  status: StudyMaterialStatus;
+  userId: string;
+  subjectId: string;
+  processedNotes: string | null;
+  subject: {
+    id: string;
+    name: string;
+  } | null;
+  _count: {
+    files: number;
+  };
+  quizStatus: StudyMaterialQuizStatus;
+  files: StudyMaterialFile[];
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type StudyMaterialsResponse = {
+  data: StudyMaterial[];
+  pagination: {
+    totalItems: number;
+    totalPages?: number;
+    page?: number;
+    limit?: number;
+  };
+};
+
 export type DashboardCheckInChartPoint = {
   date: string;
   tasksCompleted: number;
@@ -292,5 +347,26 @@ export const dashboardApi = {
   },
   async getRecentActivity(token: string) {
     return request<DashboardRecentActivityItem[]>('/check-ins/recent-activity', { token });
+  },
+};
+
+export const studyMaterialsApi = {
+  async list(
+    token: string,
+    params: {
+      page: number;
+      limit: number;
+      search?: string;
+    }
+  ) {
+    const query = new URLSearchParams({
+      page: String(params.page),
+      limit: String(params.limit),
+      ...(params.search ? { search: params.search } : {}),
+    }).toString();
+
+    return request<StudyMaterialsResponse>(`/study-materials?${query}`, {
+      token,
+    });
   },
 };
