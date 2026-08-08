@@ -95,6 +95,7 @@ export function TasksChartWidget({
       value: item.tasksCompleted,
       frontColor: '#f97316',
       labelWidth: selectedDays <= 7 ? 38 : 24,
+      labelTextStyle: { color: '#8a8a8a', fontSize: 10 },
       label: index % labelStep === 0 || index === visibleChartData.length - 1 ? shortLabel : '',
     };
   });
@@ -280,7 +281,10 @@ export function TasksChartWidget({
                     yAxisTextStyle={{ color: '#8a8a8a', fontSize: 10 }}
                     xAxisLabelTextStyle={{ color: '#8a8a8a', fontSize: 10 }}
                     xAxisTextNumberOfLines={1}
-                    xAxisLabelsHeight={30}
+                    xAxisLabelsHeight={48}
+                    xAxisLabelsAtBottom
+                    labelsDistanceFromXaxis={10}
+                    xAxisLabelsVerticalShift={8}
                     noOfSections={4}
                     maxValue={Math.max(maxTasks, 1)}
                     formatYLabel={(label) => {
