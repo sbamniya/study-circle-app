@@ -215,7 +215,14 @@ export const dashboardApi = {
     }
   ) {
     const query = new URLSearchParams(params).toString();
-    return request<DashboardCheckInChartPoint[]>(`/check-ins/chart-data?${query}`, { token });
+    try {
+      return await request<DashboardCheckInChartPoint[]>(`/check-ins/chart-data?${query}`, { token });
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 404) {
+        return [];
+      }
+      throw error;
+    }
   },
   async getStreak(token: string) {
     return request<DashboardStreak>('/check-ins/streak', { token });

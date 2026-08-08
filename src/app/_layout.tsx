@@ -2,6 +2,7 @@ import "../global.css";
 
 import { AnimatedSplashOverlay } from "@/components/animated-icon";
 import { AuthProvider } from "@/lib/auth";
+import { PortalHost } from "@rn-primitives/portal";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
@@ -100,6 +101,7 @@ export default function RootLayout() {
               <Stack.Screen name="(auth)" />
               <Stack.Screen name="(tabs)" />
             </Stack>
+            <PortalHost />
           </SafeAreaView>
         </AuthProvider>
       </QueryClientProvider>
