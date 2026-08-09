@@ -109,12 +109,26 @@ function DialogHeader({ className, ...props }: ViewProps) {
   );
 }
 
-function DialogFooter({ className, ...props }: ViewProps) {
+function DialogFooter({ className, children, ...props }: ViewProps) {
+  const actionItems = React.Children.toArray(children).filter(Boolean);
+  const shouldSplitEvenly = actionItems.length === 2;
+
   return (
     <View
-      className={cn('flex flex-col-reverse gap-2 sm:flex-row sm:justify-end', className)}
-      {...props}
-    />
+      className={cn('flex flex-row items-center gap-2', className)}
+      {...props}>
+      {actionItems.map((child, index) => {
+        if (!shouldSplitEvenly) {
+          return child;
+        }
+
+        return (
+          <View key={`dialog-footer-action-${index}`} className="flex-1">
+            {child}
+          </View>
+        );
+      })}
+    </View>
   );
 }
 
@@ -140,14 +154,15 @@ function DialogDescription({
 }
 
 export {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogOverlay,
-  DialogPortal,
-  DialogTitle,
-  DialogTrigger,
+    Dialog,
+    DialogClose,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogOverlay,
+    DialogPortal,
+    DialogTitle,
+    DialogTrigger
 };
+

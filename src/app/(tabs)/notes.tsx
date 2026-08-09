@@ -3,6 +3,14 @@ import { useConfirmDialog } from '@/components/confirm-dialog-provider';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import {
     Select,
     SelectContent,
     SelectGroup,
@@ -60,6 +68,18 @@ function toPlainText(content: string) {
     .trim();
 }
 
+function toMultilineText(content: string) {
+  return decodeHtmlEntities(content)
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/(p|div|li|h1|h2|h3|h4|h5|h6)>/gi, '\n')
+    .replace(/<(p|div|li|h1|h2|h3|h4|h5|h6)(\s+[^>]*)?>/gi, '')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\n\s+/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
 function countWords(content: string) {
   const normalized = toPlainText(content);
   if (!normalized) {
@@ -77,6 +97,7 @@ export default function NotesScreen() {
   const [selectedSubjectId, setSelectedSubjectId] = React.useState('');
   const [showNoteDialog, setShowNoteDialog] = React.useState(false);
   const [editingNote, setEditingNote] = React.useState<Note | null>(null);
+  const [detailsNote, setDetailsNote] = React.useState<Note | null>(null);
 
   const subjectsQuery = useQuery({
     queryKey: ['subjects', token],
@@ -171,6 +192,10 @@ export default function NotesScreen() {
   function onStartEditNote(note: Note) {
     setEditingNote(note);
     setShowNoteDialog(true);
+  }
+
+  function onOpenNoteDetails(note: Note) {
+    setDetailsNote(note);
   }
 
   async function onDeleteNote(note: Note) {
@@ -328,6 +353,14 @@ export default function NotesScreen() {
                             size="icon"
                             variant="outline"
                             className="h-9 w-9"
+                            onPress={() => onOpenNoteDetails(item)}
+                            disabled={isSubmitting || deleteNoteMutation.isPending}>
+                            <Feather name="more-horizontal" size={14} color="#a3a3a3" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="outline"
+                            className="h-9 w-9"
                             onPress={() => onStartEditNote(item)}
                             disabled={isSubmitting || deleteNoteMutation.isPending}>
                             <Feather name="edit-2" size={14} color="#a3a3a3" />
@@ -421,6 +454,61 @@ export default function NotesScreen() {
         onSubmit={onSubmitNote}
         submitting={isSubmitting}
       />
+
+      <Dialog
+        open={Boolean(detailsNote)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDetailsNote(null);
+          }
+        }}>
+        <DialogContent className="max-h-[88%] w-[92%] max-w-md rounded-2xl">
+          <DialogHeader>
+            <DialogTitle>Note Details</DialogTitle>
+            <DialogDescription>
+              {detailsNote
+                ? `Subject: ${detailsNote.subject?.name ?? 'N/A'} • Created: ${formatShortDate(detailsNote.createdAt)}`
+                : 'Full note content and metadata.'}
+            </DialogDescription>
+          </DialogHeader>
+
+          <ScrollView className="max-h-[62vh]" contentContainerStyle={{ gap: 12, paddingBottom: 8 }}>
+            <View className="gap-1">
+              <Text className="text-muted-foreground text-xs">Content</Text>
+              <Text className="text-sm leading-6">{detailsNote ? toMultilineText(detailsNote.content) : ''}</Text>
+            </View>
+
+            <View className="gap-1">
+              <Text className="text-muted-foreground text-xs">Subject</Text>
+              <Text className="text-sm font-medium">{detailsNote?.subject?.name ?? 'N/A'}</Text>
+            </View>
+
+            <View className="flex-row flex-wrap gap-1">
+              <View className="bg-muted rounded-full px-2 py-1">
+                <Text className="text-xs">Words: {detailsNote ? countWords(detailsNote.content) : 0}</Text>
+              </View>
+              <View className="rounded-full bg-orange-100 px-2 py-1">
+                <Text className="text-xs text-orange-700">
+                  Type: {detailsNote?.type === 'GENERATED' ? 'AI Generated' : 'Custom'}
+                </Text>
+              </View>
+              <View className="rounded-full bg-blue-100 px-2 py-1">
+                <Text className="text-xs text-blue-700">
+                  Created: {detailsNote ? formatShortDate(detailsNote.createdAt) : 'Unknown date'}
+                </Text>
+              </View>
+            </View>
+          </ScrollView>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onPress={() => setDetailsNote(null)}>
+              <Text>Close</Text>
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </SafeAreaView>
   );
 }

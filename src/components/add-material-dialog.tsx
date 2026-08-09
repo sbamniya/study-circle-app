@@ -290,7 +290,7 @@ export function AddMaterialDialog({
 
   return (
     <Dialog open={open} onOpenChange={onDialogOpenChange}>
-      <DialogContent className="max-h-[90%]">
+      <DialogContent className="mt-auto max-h-[88%] w-full max-w-none rounded-b-none rounded-t-2xl px-5 pb-6 pt-5">
         <DialogHeader>
           <DialogTitle>Add Study Material</DialogTitle>
           <DialogDescription>
