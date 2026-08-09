@@ -1,4 +1,5 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import { usePathname, useRouter } from 'expo-router';
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
 import { useColorScheme } from 'react-native';
 
@@ -7,6 +8,8 @@ import { Colors } from '@/constants/theme';
 type TabIconName = React.ComponentProps<typeof MaterialCommunityIcons>['name'];
 
 export default function AppTabs() {
+  const router = useRouter();
+  const pathname = usePathname();
   const scheme = useColorScheme();
   const colors = Colors[scheme === 'unspecified' ? 'light' : scheme];
 
@@ -44,8 +47,17 @@ export default function AppTabs() {
         <NativeTabs.Trigger.Icon src={tabIcon('account-group')} />
       </NativeTabs.Trigger>
 
-      <NativeTabs.Trigger name="more">
-        <NativeTabs.Trigger.Label>More</NativeTabs.Trigger.Label>
+      <NativeTabs.Trigger
+        name="more"
+        disabled
+        listeners={{
+          tabPress: () => {
+            if (pathname !== '/profile') {
+              router.push('/profile');
+            }
+          },
+        }}>
+        <NativeTabs.Trigger.Label>Profile</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon src={tabIcon('menu')} />
       </NativeTabs.Trigger>
     </NativeTabs>

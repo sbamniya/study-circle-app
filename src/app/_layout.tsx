@@ -103,6 +103,10 @@ export default function RootLayout() {
               >
                 <Stack screenOptions={{ headerShown: false }}>
                   <Stack.Screen name="(tabs)" />
+                  <Stack.Screen
+                    name="profile"
+                    options={{ headerShown: true, title: "Profile" }}
+                  />
                 </Stack>
                 <PortalHost />
               </SafeAreaView>

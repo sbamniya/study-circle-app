@@ -11,11 +11,12 @@ export default function CirclesScreen() {
           <Card>
             <CardHeader>
               <CardTitle>Circles</CardTitle>
-              <CardDescription>Your study circles tab is now available.</CardDescription>
+              <CardDescription>Coming Soon</CardDescription>
             </CardHeader>
             <CardContent>
               <Text className="text-muted-foreground text-sm">
-                Connect this screen to your joined circles and discovery flows next.
+                Study circles will be available soon. You will be able to join groups,
+                collaborate with peers, and track circle activities here.
               </Text>
             </CardContent>
           </Card>
