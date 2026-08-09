@@ -1,10 +1,10 @@
 import { Text } from '@/components/ui/text';
 import { useTheme } from '@/hooks/use-theme';
 import BottomSheet, {
-    BottomSheetBackdrop,
-    BottomSheetBackdropProps,
-    BottomSheetScrollView,
-    BottomSheetView,
+  BottomSheetBackdrop,
+  BottomSheetBackdropProps,
+  BottomSheetScrollView,
+  BottomSheetView,
 } from '@gorhom/bottom-sheet';
 import * as React from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -87,6 +87,7 @@ export function AppBottomSheet({
       backdropComponent={renderBackdrop}
       handleIndicatorStyle={indicatorStyle}
       backgroundStyle={sheetBackgroundStyle}
+      enableDynamicSizing
     >
       <BottomSheetView style={styles.contentContainer}>
         {title || description ? (

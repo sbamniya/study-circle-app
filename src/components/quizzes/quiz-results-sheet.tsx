@@ -82,6 +82,7 @@ export function QuizResultsSheet({
 
   React.useEffect(() => {
     if (!open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSelectedAttemptId('');
       setShowAnswerById({});
       return;
@@ -105,6 +106,7 @@ export function QuizResultsSheet({
     enabled: open && Boolean(token) && Boolean(quizId) && Boolean(selectedAttemptId),
   });
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const results = resultsQuery.data?.data ?? [];
 
   const correctnessStats = React.useMemo(() => {
@@ -152,7 +154,12 @@ export function QuizResultsSheet({
       description="Review attempts and see answer-level grading details."
       snapPoints={['85%', '95%']}
     >
-      <AppBottomSheetScrollView style={{ flex: 1 }} contentContainerStyle={{ gap: 12, paddingBottom: 8 }}>
+      <AppBottomSheetScrollView
+        style={{ flex: 1 }}
+        nestedScrollEnabled
+        showsVerticalScrollIndicator
+        contentContainerStyle={{ gap: 12, paddingBottom: 24 }}
+      >
         <View className="gap-2">
           <Text className="text-muted-foreground text-xs">Attempts</Text>
           <View className="flex-row flex-wrap gap-2">
