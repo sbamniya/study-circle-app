@@ -551,6 +551,7 @@ export default function NotesScreen() {
         }
       >
         <AppBottomSheetScrollView
+          style={{ flex: 1 }}
           contentContainerStyle={{ gap: 12, paddingBottom: 8 }}
         >
           <View className="gap-1">
