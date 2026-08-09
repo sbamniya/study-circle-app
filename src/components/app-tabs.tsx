@@ -58,7 +58,7 @@ export default function AppTabs() {
           },
         }}>
         <NativeTabs.Trigger.Label>Profile</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon src={tabIcon('menu')} />
+        <NativeTabs.Trigger.Icon src={tabIcon('account-circle')} />
       </NativeTabs.Trigger>
     </NativeTabs>
   );

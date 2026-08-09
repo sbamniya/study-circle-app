@@ -104,6 +104,10 @@ export default function RootLayout() {
                 <Stack screenOptions={{ headerShown: false }}>
                   <Stack.Screen name="(tabs)" />
                   <Stack.Screen
+                    name="circles"
+                    options={{ headerShown: true, title: "Circles" }}
+                  />
+                  <Stack.Screen
                     name="profile"
                     options={{ headerShown: true, title: "Profile" }}
                   />
