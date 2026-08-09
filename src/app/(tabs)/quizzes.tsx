@@ -1,37 +1,37 @@
+import { QuizResultsSheet } from '@/components/quizzes/quiz-results-sheet';
+import { StartQuizSheet } from '@/components/quizzes/start-quiz-sheet';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { QuizResultsSheet } from '@/components/quizzes/quiz-results-sheet';
-import { StartQuizSheet } from '@/components/quizzes/start-quiz-sheet';
 import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  type Option as SelectOption,
+    Select,
+    SelectContent,
+    SelectGroup,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+    type Option as SelectOption,
 } from '@/components/ui/select';
 import { Text } from '@/components/ui/text';
 import {
-  quizzesApi,
-  type QuizAttempt,
-  subjectsApi,
-  type Quiz,
-  type QuizDifficultyLevel,
-  type Subject,
+    quizzesApi,
+    subjectsApi,
+    type Quiz,
+    type QuizAttempt,
+    type QuizDifficultyLevel,
+    type Subject,
 } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { Feather } from '@expo/vector-icons';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as React from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  FlatList,
-  RefreshControl,
-  ScrollView,
-  View,
+    ActivityIndicator,
+    Alert,
+    FlatList,
+    RefreshControl,
+    ScrollView,
+    View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 

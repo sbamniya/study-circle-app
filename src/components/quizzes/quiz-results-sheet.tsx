@@ -3,9 +3,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
 import {
-  quizzesApi,
-  type QuizAnswerCorrectness,
-  type QuizAnswerGrading,
+    quizzesApi,
+    type QuizAnswerCorrectness,
+    type QuizAnswerGrading,
 } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { Feather } from '@expo/vector-icons';
