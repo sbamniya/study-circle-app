@@ -1,16 +1,30 @@
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Text } from '@/components/ui/text';
+import {
+  useConfirmDialog,
+} from "@/components/confirm-dialog-provider";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Text } from "@/components/ui/text";
 import {
   studyMaterialsApi,
   type StudyMaterial,
   type StudyMaterialQuizStatus,
   type StudyMaterialStatus,
-} from '@/lib/api';
-import { useAuth } from '@/lib/auth';
-import { Feather } from '@expo/vector-icons';
-import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import * as React from 'react';
+} from "@/lib/api";
+import { useAuth } from "@/lib/auth";
+import { Feather } from "@expo/vector-icons";
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
+import * as React from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -18,40 +32,40 @@ import {
   RefreshControl,
   ScrollView,
   View,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 const PAGE_SIZE = 8;
 
 const STATUS_LABELS: Record<StudyMaterialStatus, string> = {
-  PENDING: 'Pending',
-  PROCESSING: 'Processing',
-  PROCESSED: 'Processed',
-  PROCESSING_FAILED: 'Failed',
-  GENERATING_NOTES: 'Generating Notes',
-  NOTES_GENERATED: 'Notes Ready',
-  NOTES_GENERATION_FAILED: 'Notes Failed',
-  ARCHIVED: 'Archived',
+  PENDING: "Pending",
+  PROCESSING: "Processing",
+  PROCESSED: "Processed",
+  PROCESSING_FAILED: "Failed",
+  GENERATING_NOTES: "Generating Notes",
+  NOTES_GENERATED: "Notes Ready",
+  NOTES_GENERATION_FAILED: "Notes Failed",
+  ARCHIVED: "Archived",
 };
 
 const QUIZ_STATUS_LABELS: Record<StudyMaterialQuizStatus, string> = {
-  PENDING: 'Pending',
-  GENERATING: 'Generating',
-  GENERATED: 'Generated',
-  GENERATION_FAILED: 'Failed',
+  PENDING: "Pending",
+  GENERATING: "Generating",
+  GENERATED: "Generated",
+  GENERATION_FAILED: "Failed",
 };
 
 function formatShortDate(date: string) {
   const parsedDate = new Date(date);
 
   if (Number.isNaN(parsedDate.getTime())) {
-    return 'Unknown date';
+    return "Unknown date";
   }
 
   return parsedDate.toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
+    month: "short",
+    day: "numeric",
+    year: "numeric",
   });
 }
 
@@ -62,22 +76,25 @@ function summarizeStatuses(material: StudyMaterial) {
   }
 
   const hasFailed = statuses.some(
-    (status) => status === 'PROCESSING_FAILED' || status === 'NOTES_GENERATION_FAILED'
+    (status) =>
+      status === "PROCESSING_FAILED" || status === "NOTES_GENERATION_FAILED",
   );
   if (hasFailed) {
-    return 'Needs Attention';
+    return "Needs Attention";
   }
 
   const hasProcessing = statuses.some(
-    (status) => status === 'PROCESSING' || status === 'GENERATING_NOTES'
+    (status) => status === "PROCESSING" || status === "GENERATING_NOTES",
   );
   if (hasProcessing) {
-    return 'In Progress';
+    return "In Progress";
   }
 
-  const hasReady = statuses.some((status) => status === 'PROCESSED' || status === 'NOTES_GENERATED');
+  const hasReady = statuses.some(
+    (status) => status === "PROCESSED" || status === "NOTES_GENERATED",
+  );
   if (hasReady) {
-    return 'Ready';
+    return "Ready";
   }
 
   return STATUS_LABELS[material.status];
@@ -90,20 +107,26 @@ function summarizeQuiz(material: StudyMaterial) {
     return QUIZ_STATUS_LABELS[material.quizStatus];
   }
 
-  const generatedCount = quizStatuses.filter((status) => status === 'GENERATED').length;
-  const failedCount = quizStatuses.filter((status) => status === 'GENERATION_FAILED').length;
-  const generatingCount = quizStatuses.filter((status) => status === 'GENERATING').length;
+  const generatedCount = quizStatuses.filter(
+    (status) => status === "GENERATED",
+  ).length;
+  const failedCount = quizStatuses.filter(
+    (status) => status === "GENERATION_FAILED",
+  ).length;
+  const generatingCount = quizStatuses.filter(
+    (status) => status === "GENERATING",
+  ).length;
 
   if (generatedCount === quizStatuses.length) {
-    return 'All Generated';
+    return "All Generated";
   }
 
   if (generatingCount > 0) {
-    return 'Generating';
+    return "Generating";
   }
 
   if (failedCount > 0) {
-    return 'Some Failed';
+    return "Some Failed";
   }
 
   return `${generatedCount}/${quizStatuses.length} Generated`;
@@ -111,10 +134,24 @@ function summarizeQuiz(material: StudyMaterial) {
 
 export default function MaterialsScreen() {
   const { token } = useAuth();
+  const queryClient = useQueryClient();
+  const confirm = useConfirmDialog();
   const [page, setPage] = React.useState(1);
 
+  const deleteMaterialMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return studyMaterialsApi.delete(token as string, id);
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: ["study-materials"],
+      });
+      void materialsQuery.refetch();
+    },
+  });
+
   const materialsQuery = useQuery({
-    queryKey: ['study-materials', token, page, PAGE_SIZE],
+    queryKey: ["study-materials", token, page, PAGE_SIZE],
     queryFn: async () =>
       studyMaterialsApi.list(token as string, {
         page,
@@ -127,11 +164,13 @@ export default function MaterialsScreen() {
   const materials = materialsQuery.data?.data ?? [];
   const totalItems = materialsQuery.data?.pagination.totalItems ?? 0;
   const totalPages =
-    materialsQuery.data?.pagination.totalPages ?? Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
+    materialsQuery.data?.pagination.totalPages ??
+    Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
   const isRefreshing = materialsQuery.isFetching && !materialsQuery.isLoading;
 
   const startIndex = totalItems === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
-  const endIndex = totalItems === 0 ? 0 : Math.min(page * PAGE_SIZE, totalItems);
+  const endIndex =
+    totalItems === 0 ? 0 : Math.min(page * PAGE_SIZE, totalItems);
 
   function onRefresh() {
     void materialsQuery.refetch();
@@ -145,11 +184,38 @@ export default function MaterialsScreen() {
     setPage((currentPage) => Math.min(totalPages, currentPage + 1));
   }
 
+  async function onDeleteMaterial(material: StudyMaterial) {
+    const confirmed = await confirm({
+      title: "Delete Study Material",
+      description: `Are you sure you want to delete \"${material.title}\"? This action cannot be undone.`,
+      confirmText: "Delete",
+      cancelText: "Cancel",
+    });
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      await deleteMaterialMutation.mutateAsync(material.id);
+      Alert.alert("Deleted", "Study material deleted successfully.");
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Unable to delete the study material right now.";
+      Alert.alert("Delete Failed", message);
+    }
+  }
+
   return (
     <SafeAreaView className="bg-background flex-1">
       <ScrollView
-        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />}
-        contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 20 }}>
+        refreshControl={
+          <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />
+        }
+        contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 20 }}
+      >
         <View className="mx-auto w-full max-w-md gap-4 pb-8">
           <View className="flex-row items-start justify-between">
             <View className="flex-1 pr-3">
@@ -162,7 +228,8 @@ export default function MaterialsScreen() {
               size="icon"
               variant="outline"
               onPress={onRefresh}
-              disabled={materialsQuery.isLoading || materialsQuery.isFetching}>
+              disabled={materialsQuery.isLoading || materialsQuery.isFetching}
+            >
               {materialsQuery.isLoading || materialsQuery.isFetching ? (
                 <ActivityIndicator size="small" />
               ) : (
@@ -175,7 +242,12 @@ export default function MaterialsScreen() {
             <Button
               className="flex-1"
               variant="outline"
-              onPress={() => Alert.alert('Coming Soon', 'Buy from Library will be available soon.')}
+              onPress={() =>
+                Alert.alert(
+                  "Coming Soon",
+                  "Buy from Library will be available soon.",
+                )
+              }
             >
               <Feather name="shopping-bag" size={16} color="#a3a3a3" />
               <Text>Buy from Library</Text>
@@ -183,8 +255,12 @@ export default function MaterialsScreen() {
             <Button
               className="flex-1"
               onPress={() =>
-                Alert.alert('Coming Soon', 'Add Study Material flow will be available in the mobile app soon.')
-              }>
+                Alert.alert(
+                  "Coming Soon",
+                  "Add Study Material flow will be available in the mobile app soon.",
+                )
+              }
+            >
               <Feather name="plus" size={16} color="#000000" />
               <Text>Add Material</Text>
             </Button>
@@ -195,7 +271,9 @@ export default function MaterialsScreen() {
               {[0, 1, 2, 3].map((item) => (
                 <Card key={item} className="gap-3 py-4">
                   <CardHeader className="px-4">
-                    <CardTitle className="text-base">Loading material...</CardTitle>
+                    <CardTitle className="text-base">
+                      Loading material...
+                    </CardTitle>
                     <CardDescription>Fetching latest materials</CardDescription>
                   </CardHeader>
                 </Card>
@@ -208,7 +286,8 @@ export default function MaterialsScreen() {
               <CardHeader className="px-4">
                 <CardTitle>No Materials Found</CardTitle>
                 <CardDescription>
-                  Upload your first study material to start organizing your learning content.
+                  Upload your first study material to start organizing your
+                  learning content.
                 </CardDescription>
               </CardHeader>
               <CardContent className="px-4">
@@ -217,10 +296,11 @@ export default function MaterialsScreen() {
                   className="self-start"
                   onPress={() =>
                     Alert.alert(
-                      'Coming Soon',
-                      'Upload and manage study materials will be available in the mobile app soon.'
+                      "Coming Soon",
+                      "Upload and manage study materials will be available in the mobile app soon.",
                     )
-                  }>
+                  }
+                >
                   <Feather name="plus" size={16} color="#ffffff" />
                   <Text>Upload Material</Text>
                 </Button>
@@ -238,36 +318,65 @@ export default function MaterialsScreen() {
                 renderItem={({ item }) => (
                   <Card className="gap-3 py-4">
                     <CardHeader className="gap-2 px-4">
-                      <CardTitle className="text-base" numberOfLines={2}>
-                        {item.title}
-                      </CardTitle>
+                      <View className="flex-row items-start justify-between gap-2">
+                        <CardTitle
+                          className="text-base flex-1"
+                          numberOfLines={2}
+                        >
+                          {item.title}
+                        </CardTitle>
+                        <Button
+                          size="icon"
+                          variant="destructive"
+                          onPress={() => onDeleteMaterial(item)}
+                          disabled={deleteMaterialMutation.isPending}
+                        >
+                          {deleteMaterialMutation.isPending ? (
+                            <ActivityIndicator size="small" color="#ffffff" />
+                          ) : (
+                            <Feather name="trash-2" size={16} color="#ffffff" />
+                          )}
+                        </Button>
+                      </View>
                       <CardDescription numberOfLines={3}>
-                        {item.description?.trim() || 'No description provided'}
+                        {item.description?.trim() || "No description provided"}
                       </CardDescription>
                     </CardHeader>
 
                     <CardContent className="gap-2 px-4">
                       <View className="gap-1">
-                        <Text className="text-muted-foreground text-xs">Subject</Text>
+                        <Text className="text-muted-foreground text-xs">
+                          Subject
+                        </Text>
                         <Text className="text-sm font-medium" numberOfLines={1}>
-                          {item.subject?.name ?? 'N/A'}
+                          {item.subject?.name ?? "N/A"}
                         </Text>
                       </View>
 
                       <View className="gap-1">
-                        <Text className="text-muted-foreground text-xs">Created</Text>
-                        <Text className="text-sm">{formatShortDate(item.createdAt)}</Text>
+                        <Text className="text-muted-foreground text-xs">
+                          Created
+                        </Text>
+                        <Text className="text-sm">
+                          {formatShortDate(item.createdAt)}
+                        </Text>
                       </View>
 
                       <View className="flex-row flex-wrap gap-1">
                         <View className="bg-muted rounded-full px-2 py-1">
-                          <Text className="text-xs">Files: {item._count?.files ?? item.files.length}</Text>
+                          <Text className="text-xs">
+                            Files: {item._count?.files ?? item.files.length}
+                          </Text>
                         </View>
                         <View className="rounded-full bg-orange-100 px-2 py-1">
-                          <Text className="text-xs text-orange-700">{summarizeStatuses(item)}</Text>
+                          <Text className="text-xs text-orange-700">
+                            {summarizeStatuses(item)}
+                          </Text>
                         </View>
                         <View className="rounded-full bg-blue-100 px-2 py-1">
-                          <Text className="text-xs text-blue-700">Quiz: {summarizeQuiz(item)}</Text>
+                          <Text className="text-xs text-blue-700">
+                            Quiz: {summarizeQuiz(item)}
+                          </Text>
                         </View>
                       </View>
                     </CardContent>
@@ -288,7 +397,8 @@ export default function MaterialsScreen() {
                     variant="outline"
                     className="flex-1"
                     onPress={onPreviousPage}
-                    disabled={page <= 1 || materialsQuery.isFetching}>
+                    disabled={page <= 1 || materialsQuery.isFetching}
+                  >
                     <Feather name="chevron-left" size={16} color="#a3a3a3" />
                     <Text>Previous</Text>
                   </Button>
@@ -297,7 +407,8 @@ export default function MaterialsScreen() {
                     variant="outline"
                     className="flex-1"
                     onPress={onNextPage}
-                    disabled={page >= totalPages || materialsQuery.isFetching}>
+                    disabled={page >= totalPages || materialsQuery.isFetching}
+                  >
                     <Text>Next</Text>
                     <Feather name="chevron-right" size={16} color="#a3a3a3" />
                   </Button>

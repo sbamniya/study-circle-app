@@ -369,4 +369,10 @@ export const studyMaterialsApi = {
       token,
     });
   },
+  async delete(token: string, id: string) {
+    return request<MessageResponse | null>(`/study-materials/${id}`, {
+      method: 'DELETE',
+      token,
+    });
+  },
 };

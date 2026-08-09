@@ -1,6 +1,7 @@
 import "../global.css";
 
 import { AnimatedSplashOverlay } from "@/components/animated-icon";
+import { ConfirmDialogProvider } from "@/components/confirm-dialog-provider";
 import { AuthProvider } from "@/lib/auth";
 import { PortalHost } from "@rn-primitives/portal";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -90,19 +91,21 @@ export default function RootLayout() {
     <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
-          <AnimatedSplashOverlay />
-          <SafeAreaView
-            className="bg-background flex-1"
-            style={{
-              height,
-            }}
-          >
-            <Stack screenOptions={{ headerShown: false }}>
-              <Stack.Screen name="(auth)" />
-              <Stack.Screen name="(tabs)" />
-            </Stack>
-            <PortalHost />
-          </SafeAreaView>
+          <ConfirmDialogProvider>
+            <AnimatedSplashOverlay />
+            <SafeAreaView
+              className="bg-background flex-1"
+              style={{
+                height,
+              }}
+            >
+              <Stack screenOptions={{ headerShown: false }}>
+                <Stack.Screen name="(auth)" />
+                <Stack.Screen name="(tabs)" />
+              </Stack>
+              <PortalHost />
+            </SafeAreaView>
+          </ConfirmDialogProvider>
         </AuthProvider>
       </QueryClientProvider>
     </ThemeProvider>
