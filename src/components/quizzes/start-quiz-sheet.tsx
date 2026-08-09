@@ -1,21 +1,24 @@
-import { useConfirmDialog } from '@/components/confirm-dialog-provider';
-import { AppBottomSheet, AppBottomSheetScrollView } from '@/components/ui/app-bottom-sheet';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Text } from '@/components/ui/text';
+import { useConfirmDialog } from "@/components/confirm-dialog-provider";
+import {
+    AppBottomSheet,
+    AppBottomSheetScrollView,
+} from "@/components/ui/app-bottom-sheet";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Text } from "@/components/ui/text";
 import {
     quizzesApi,
     type QuizAttempt,
     type QuizQuestion,
     type QuizQuestionType,
-} from '@/lib/api';
-import { useAuth } from '@/lib/auth';
-import { cn } from '@/lib/utils';
-import { Feather } from '@expo/vector-icons';
-import { useMutation, useQuery } from '@tanstack/react-query';
-import * as React from 'react';
-import { ActivityIndicator, View } from 'react-native';
+} from "@/lib/api";
+import { useAuth } from "@/lib/auth";
+import { cn } from "@/lib/utils";
+import { Feather } from "@expo/vector-icons";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import * as React from "react";
+import { ActivityIndicator, View } from "react-native";
 
 type AnswerState = Record<string, { answer: string; saved: boolean }>;
 
@@ -25,8 +28,8 @@ function normalizeAnswerOption(option: string) {
 
 function trueFalseOptions() {
   return [
-    { label: 'True', value: 'true' },
-    { label: 'False', value: 'false' },
+    { label: "True", value: "true" },
+    { label: "False", value: "false" },
   ];
 }
 
@@ -35,13 +38,15 @@ function QuestionOptions({
   options,
   value,
   onChange,
+  autoAdvanceOnSelect,
 }: {
   type: QuizQuestionType;
   options: string[];
   value: string;
   onChange: (next: string) => void;
+  autoAdvanceOnSelect?: boolean;
 }) {
-  if (type === 'SHORT_ANSWER') {
+  if (type === "SHORT_ANSWER") {
     return (
       <Input
         value={value}
@@ -56,7 +61,7 @@ function QuestionOptions({
   }
 
   const renderedOptions =
-    type === 'TRUE_FALSE'
+    type === "TRUE_FALSE"
       ? trueFalseOptions()
       : options.map((option) => ({ label: option, value: option }));
 
@@ -68,8 +73,16 @@ function QuestionOptions({
           <Button
             key={option.value}
             variant="outline"
-            className={cn('justify-start', isSelected && 'border-primary bg-muted')}
-            onPress={() => onChange(option.value)}
+            className={cn(
+              "justify-start",
+              isSelected && "border-primary bg-muted",
+            )}
+            onPress={() => {
+              onChange(option.value);
+              if (autoAdvanceOnSelect) {
+                return;
+              }
+            }}
           >
             <Text>{option.label}</Text>
           </Button>
@@ -92,8 +105,9 @@ export function StartQuizSheet({
   const confirm = useConfirmDialog();
 
   const quizQuery = useQuery({
-    queryKey: ['quiz-details', token, attempt?.quizId],
-    queryFn: async () => quizzesApi.getById(token as string, attempt?.quizId as string),
+    queryKey: ["quiz-details", token, attempt?.quizId],
+    queryFn: async () =>
+      quizzesApi.getById(token as string, attempt?.quizId as string),
     enabled: open && Boolean(token) && Boolean(attempt?.quizId),
   });
 
@@ -103,12 +117,18 @@ export function StartQuizSheet({
       attemptId: string;
       answers: { questionId: string; answer: string }[];
     }) => {
-      return quizzesApi.saveAnswers(token as string, payload.quizId, payload.attemptId, {
-        answers: payload.answers,
-      });
+      return quizzesApi.saveAnswers(
+        token as string,
+        payload.quizId,
+        payload.attemptId,
+        {
+          answers: payload.answers,
+        },
+      );
     },
   });
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const questions = quizQuery.data?.quizQuestions ?? [];
 
   const [currentQuestionIndex, setCurrentQuestionIndex] = React.useState(0);
@@ -130,34 +150,49 @@ export function StartQuizSheet({
       };
     }
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setAnswers(initialAnswers);
-    setCurrentQuestionIndex(Math.max((attempt.quizAttemptAnswers?.length ?? 1) - 1, 0));
+    setCurrentQuestionIndex(
+      Math.max((attempt.quizAttemptAnswers?.length ?? 1) - 1, 0),
+    );
     setIsShowingSolution(false);
     setSaveNotice(null);
     setLastSavedAt(null);
-  }, [attempt?.id]);
+  }, [attempt, attempt?.id]);
 
   const currentQuestion: QuizQuestion | null =
-    questions.length > 0 ? questions[currentQuestionIndex] ?? null : null;
+    questions.length > 0 ? (questions[currentQuestionIndex] ?? null) : null;
 
   const questionTypeById = React.useMemo(() => {
-    const entries = questions.map((question) => [question.id, question.type] as const);
+    const entries = questions.map(
+      (question) => [question.id, question.type] as const,
+    );
     return new Map(entries);
   }, [questions]);
 
-  const currentAnswer = currentQuestion ? answers[currentQuestion.id]?.answer ?? '' : '';
-  const currentAnswerState = currentQuestion ? answers[currentQuestion.id] : undefined;
+  const currentAnswer = currentQuestion
+    ? (answers[currentQuestion.id]?.answer ?? "")
+    : "";
+  const currentAnswerState = currentQuestion
+    ? answers[currentQuestion.id]
+    : undefined;
 
   const totalQuestions = questions.length;
   const isFirstQuestion = currentQuestionIndex <= 0;
-  const isLastQuestion = totalQuestions > 0 && currentQuestionIndex >= totalQuestions - 1;
+  const isLastQuestion =
+    totalQuestions > 0 && currentQuestionIndex >= totalQuestions - 1;
   const hasUnsavedAnswers = React.useMemo(
-    () => Object.values(answers).some((value) => !value.saved && value.answer.trim().length > 0),
-    [answers]
+    () =>
+      Object.values(answers).some(
+        (value) => !value.saved && value.answer.trim().length > 0,
+      ),
+    [answers],
   );
 
   const progressPercent =
-    totalQuestions > 0 ? Math.round(((currentQuestionIndex + 1) / totalQuestions) * 100) : 0;
+    totalQuestions > 0
+      ? Math.round(((currentQuestionIndex + 1) / totalQuestions) * 100)
+      : 0;
 
   const currentSaveStateLabel = React.useMemo(() => {
     if (!currentQuestion) {
@@ -165,78 +200,84 @@ export function StartQuizSheet({
     }
 
     if (!currentAnswerState?.answer?.trim()) {
-      return 'Not answered';
+      return "Not answered";
     }
 
     if (saveMutation.isPending) {
-      return 'Saving...';
+      return "Saving...";
     }
 
     if (currentAnswerState.saved) {
-      return 'Saved';
+      return "Saved";
     }
 
-    return 'Unsaved';
+    return "Unsaved";
   }, [currentQuestion, currentAnswerState, saveMutation.isPending]);
 
   const currentSaveStateIcon = React.useMemo(() => {
     switch (currentSaveStateLabel) {
-      case 'Saved':
-        return 'check-circle';
-      case 'Saving...':
-        return 'loader';
-      case 'Unsaved':
-        return 'clock';
+      case "Saved":
+        return "check-circle";
+      case "Saving...":
+        return "loader";
+      case "Unsaved":
+        return "clock";
       default:
-        return 'minus-circle';
+        return "minus-circle";
     }
   }, [currentSaveStateLabel]);
 
-  const saveAllDraftAnswers = React.useCallback(async () => {
-    if (!attempt) {
-      return true;
-    }
+  const saveAllDraftAnswers = React.useCallback(
+    async (answersSnapshot?: AnswerState) => {
+      if (!attempt) {
+        return true;
+      }
 
-    const draftAnswers = Object.entries(answers)
-      .filter(([, value]) => value.answer.trim().length > 0)
-      .map(([questionId, value]) => ({
-        questionId,
-        answer:
-          questionTypeById.get(questionId) === 'TRUE_FALSE'
-            ? normalizeAnswerOption(value.answer)
-            : value.answer,
-      }));
+      const sourceAnswers = answersSnapshot ?? answers;
 
-    if (draftAnswers.length === 0) {
-      return true;
-    }
+      const draftAnswers = Object.entries(sourceAnswers)
+        .filter(([, value]) => value.answer.trim().length > 0)
+        .map(([questionId, value]) => ({
+          questionId,
+          answer:
+            questionTypeById.get(questionId) === "TRUE_FALSE"
+              ? normalizeAnswerOption(value.answer)
+              : value.answer,
+        }));
 
-    try {
-      setSaveNotice('Saving answers...');
-      await saveMutation.mutateAsync({
-        quizId: attempt.quizId,
-        attemptId: attempt.id,
-        answers: draftAnswers,
-      });
-      setAnswers((previous) => {
-        const next: AnswerState = { ...previous };
-        for (const key of Object.keys(next)) {
-          next[key] = {
-            ...next[key],
-            saved: true,
-          };
-        }
-        return next;
-      });
-      setSaveNotice('Saved');
-      setLastSavedAt(new Date());
-      return true;
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to save answers.';
-      setSaveNotice(message);
-      return false;
-    }
-  }, [answers, attempt, questionTypeById, saveMutation, token]);
+      if (draftAnswers.length === 0) {
+        return true;
+      }
+
+      try {
+        setSaveNotice("Saving answers...");
+        await saveMutation.mutateAsync({
+          quizId: attempt.quizId,
+          attemptId: attempt.id,
+          answers: draftAnswers,
+        });
+        setAnswers((previous) => {
+          const next: AnswerState = { ...previous };
+          for (const key of Object.keys(next)) {
+            next[key] = {
+              ...next[key],
+              saved: true,
+            };
+          }
+          return next;
+        });
+        setSaveNotice("Saved");
+        setLastSavedAt(new Date());
+        return true;
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "Failed to save answers.";
+        setSaveNotice(message);
+        return false;
+      }
+    },
+    [answers, attempt, questionTypeById, saveMutation],
+  );
 
   React.useEffect(() => {
     if (!open || !hasUnsavedAnswers || saveMutation.isPending) {
@@ -257,11 +298,11 @@ export function StartQuizSheet({
     }
 
     const confirmed = await confirm({
-      title: 'Discard Unsaved Answers?',
+      title: "Discard Unsaved Answers?",
       description:
-        'You have unsaved answers. Leaving now may lose your latest changes. Do you still want to exit?',
-      confirmText: 'Exit Quiz',
-      cancelText: 'Stay',
+        "You have unsaved answers. Leaving now may lose your latest changes. Do you still want to exit?",
+      confirmText: "Exit Quiz",
+      cancelText: "Stay",
     });
 
     if (!confirmed) {
@@ -271,20 +312,27 @@ export function StartQuizSheet({
     onOpenChange(false);
   }
 
+  const goToNextQuestion = React.useCallback(
+    async (answersSnapshot?: AnswerState) => {
+      const saved = await saveAllDraftAnswers(answersSnapshot);
+      if (!saved) {
+        return;
+      }
+
+      setIsShowingSolution(false);
+
+      if (isLastQuestion) {
+        onOpenChange(false);
+        return;
+      }
+
+      setCurrentQuestionIndex((value) => value + 1);
+    },
+    [isLastQuestion, onOpenChange, saveAllDraftAnswers],
+  );
+
   async function onNext() {
-    const saved = await saveAllDraftAnswers();
-    if (!saved) {
-      return;
-    }
-
-    setIsShowingSolution(false);
-
-    if (isLastQuestion) {
-      onOpenChange(false);
-      return;
-    }
-
-    setCurrentQuestionIndex((value) => value + 1);
+    await goToNextQuestion();
   }
 
   function onPrevious() {
@@ -299,6 +347,19 @@ export function StartQuizSheet({
   function onAnswerChange(nextValue: string) {
     if (!currentQuestion) {
       return;
+    }
+
+    const nextAnswers: AnswerState = {
+      ...answers,
+      [currentQuestion.id]: {
+        answer: nextValue,
+        saved: false,
+      },
+    };
+
+    setAnswers(nextAnswers);
+    if (["MULTIPLE_CHOICE", "TRUE_FALSE"].includes(currentQuestion.type)) {
+      void goToNextQuestion(nextAnswers);
     }
 
     setAnswers((previous) => ({
@@ -320,13 +381,15 @@ export function StartQuizSheet({
         }
         onOpenChange(nextOpen);
       }}
-      title={quizQuery.data ? `Take Quiz: ${quizQuery.data.title}` : 'Take Quiz'}
+      title={
+        quizQuery.data ? `Take Quiz: ${quizQuery.data.title}` : "Take Quiz"
+      }
       description={
         totalQuestions > 0
           ? `Question ${Math.min(currentQuestionIndex + 1, totalQuestions)} of ${totalQuestions}`
-          : 'Loading quiz details'
+          : "Loading quiz details"
       }
-      snapPoints={['85%', '95%']}
+      snapPoints={["85%", "95%"]}
       enablePanDownToClose={false}
       backdropPressBehavior="none"
     >
@@ -339,20 +402,29 @@ export function StartQuizSheet({
         </View>
         <View className="flex-row items-center justify-between">
           <Text className="text-muted-foreground text-xs">Progress</Text>
-          <Text className="text-muted-foreground text-xs">{progressPercent}%</Text>
+          <Text className="text-muted-foreground text-xs">
+            {progressPercent}%
+          </Text>
         </View>
-        {saveNotice ? <Text className="text-muted-foreground text-xs">{saveNotice}</Text> : null}
+        {saveNotice ? (
+          <Text className="text-muted-foreground text-xs">{saveNotice}</Text>
+        ) : null}
         {lastSavedAt ? (
           <Text className="text-muted-foreground text-xs">
             Last autosaved at {lastSavedAt.toLocaleTimeString()}
           </Text>
         ) : null}
         {hasUnsavedAnswers ? (
-          <Text className="text-amber-600 text-xs">Unsaved changes pending auto-save...</Text>
+          <Text className="text-amber-600 text-xs">
+            Unsaved changes pending auto-save...
+          </Text>
         ) : null}
       </View>
 
-      <AppBottomSheetScrollView style={{ flex: 1 }} contentContainerStyle={{ gap: 12, paddingBottom: 8 }}>
+      <AppBottomSheetScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ gap: 12, paddingBottom: 8 }}
+      >
         {quizQuery.isLoading ? (
           <Card className="gap-3 py-4">
             <CardHeader className="px-4">
@@ -370,7 +442,9 @@ export function StartQuizSheet({
               <CardTitle className="text-base">Failed to load quiz</CardTitle>
             </CardHeader>
             <CardContent className="px-4">
-              <Text className="text-destructive text-sm">Please close and try again.</Text>
+              <Text className="text-destructive text-sm">
+                Please close and try again.
+              </Text>
             </CardContent>
           </Card>
         ) : null}
@@ -397,8 +471,14 @@ export function StartQuizSheet({
               {currentSaveStateLabel ? (
                 <View className="pt-1">
                   <View className="bg-muted self-start flex-row items-center gap-1 rounded-full px-2 py-1">
-                    <Feather name={currentSaveStateIcon as any} size={12} color="#737373" />
-                    <Text className="text-muted-foreground text-xs">Status: {currentSaveStateLabel}</Text>
+                    <Feather
+                      name={currentSaveStateIcon as any}
+                      size={12}
+                      color="#737373"
+                    />
+                    <Text className="text-muted-foreground text-xs">
+                      Status: {currentSaveStateLabel}
+                    </Text>
                   </View>
                 </View>
               ) : null}
@@ -409,15 +489,17 @@ export function StartQuizSheet({
                 options={currentQuestion.options ?? []}
                 value={currentAnswer}
                 onChange={onAnswerChange}
+                autoAdvanceOnSelect={currentQuestion.type === "MULTIPLE_CHOICE"}
               />
 
               {isShowingSolution ? (
                 <View className="bg-muted/60 border-border gap-1 rounded-lg border p-3">
                   <Text className="text-sm font-semibold">
-                    Answer: {currentQuestion.answer ?? 'N/A'}
+                    Answer: {currentQuestion.answer ?? "N/A"}
                   </Text>
                   <Text className="text-muted-foreground text-sm">
-                    Explanation: {currentQuestion.explanation ?? 'No explanation available.'}
+                    Explanation:{" "}
+                    {currentQuestion.explanation ?? "No explanation available."}
                   </Text>
                 </View>
               ) : null}
@@ -437,7 +519,9 @@ export function StartQuizSheet({
             variant="outline"
             className="flex-1"
             onPress={onPrevious}
-            disabled={isFirstQuestion || saveMutation.isPending || !currentQuestion}
+            disabled={
+              isFirstQuestion || saveMutation.isPending || !currentQuestion
+            }
           >
             <Feather name="chevron-left" size={16} color="#a3a3a3" />
             <Text>Previous</Text>
@@ -449,22 +533,32 @@ export function StartQuizSheet({
             onPress={() => setIsShowingSolution((value) => !value)}
             disabled={!currentQuestion}
           >
-            <Feather name={isShowingSolution ? 'eye-off' : 'eye'} size={16} color="#a3a3a3" />
-            <Text>{isShowingSolution ? 'Hide Answer' : 'Show Answer'}</Text>
+            <Feather
+              name={isShowingSolution ? "eye-off" : "eye"}
+              size={16}
+              color="#a3a3a3"
+            />
+            <Text>{isShowingSolution ? "Hide Answer" : "Show Answer"}</Text>
           </Button>
         </View>
 
         <Button
           size="sm"
           onPress={onNext}
-          disabled={!currentAnswer.trim() || saveMutation.isPending || !currentQuestion}
+          disabled={
+            !currentAnswer.trim() || saveMutation.isPending || !currentQuestion
+          }
         >
           {saveMutation.isPending ? (
             <ActivityIndicator size="small" color="#ffffff" />
           ) : (
-            <Feather name={isLastQuestion ? 'check' : 'chevron-right'} size={16} color="#ffffff" />
+            <Feather
+              name={isLastQuestion ? "check" : "chevron-right"}
+              size={16}
+              color="#ffffff"
+            />
           )}
-          <Text>{isLastQuestion ? 'Submit' : 'Next'}</Text>
+          <Text>{isLastQuestion ? "Submit" : "Next"}</Text>
         </Button>
       </View>
     </AppBottomSheet>

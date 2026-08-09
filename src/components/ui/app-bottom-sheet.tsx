@@ -31,7 +31,7 @@ export function AppBottomSheet({
   children,
 }: AppBottomSheetProps) {
   const theme = useTheme();
-  const bottomSheetRef = React.useRef<BottomSheet>(null);
+  const sheetIndex = open ? 0 : -1;
 
   const memoizedSnapPoints = React.useMemo(() => snapPoints, [snapPoints]);
   const sheetBackgroundStyle = React.useMemo(
@@ -49,21 +49,6 @@ export function AppBottomSheet({
     [theme.textSecondary]
   );
 
-  React.useEffect(() => {
-    const sheet = bottomSheetRef.current;
-
-    if (!sheet) {
-      return;
-    }
-
-    if (open) {
-      sheet.snapToIndex(0);
-      return;
-    }
-
-    sheet.close();
-  }, [open]);
-
   const renderBackdrop = React.useCallback(
     (props: BottomSheetBackdropProps) => (
       <BottomSheetBackdrop
@@ -78,7 +63,12 @@ export function AppBottomSheet({
 
   const onSheetChange = React.useCallback(
     (index: number) => {
-      onOpenChange(index >= 0);
+      if (index === -1) {
+        onOpenChange(false);
+        return;
+      }
+
+      onOpenChange(true);
     },
     [onOpenChange]
   );
@@ -89,8 +79,7 @@ export function AppBottomSheet({
 
   return (
     <BottomSheet
-      ref={bottomSheetRef}
-      index={-1}
+      index={sheetIndex}
       snapPoints={memoizedSnapPoints}
       enablePanDownToClose={enablePanDownToClose}
       onChange={onSheetChange}
