@@ -32,6 +32,7 @@ type AddNoteFormValue = {
 };
 
 type AddNoteFormErrors = Partial<Record<keyof AddNoteFormValue, string>>;
+type StrictSelectOption = Exclude<SelectOption, undefined>;
 
 function getInitialValues(editingNote?: Note | null): AddNoteFormValue {
   return {
@@ -40,7 +41,7 @@ function getInitialValues(editingNote?: Note | null): AddNoteFormValue {
   };
 }
 
-function toSelectOptions(subjects: Subject[]): SelectOption[] {
+function toSelectOptions(subjects: Subject[]): StrictSelectOption[] {
   return subjects.map((subject) => ({
     value: String(subject.id),
     label: subject.name,
@@ -111,7 +112,7 @@ export function AddNoteDialog({
     [subjectsQuery.data?.data]
   );
 
-  const selectedSubject = subjectOptions.find((option) => option.value === values.subjectId) ?? null;
+  const selectedSubject = subjectOptions.find((option) => option.value === values.subjectId);
 
   const createSubjectMutation = useMutation({
     mutationFn: async (name: string) => {

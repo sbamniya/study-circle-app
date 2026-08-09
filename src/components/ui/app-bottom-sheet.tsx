@@ -15,6 +15,8 @@ type AppBottomSheetProps = {
   title?: string;
   description?: string;
   snapPoints?: (number | string)[];
+  enablePanDownToClose?: boolean;
+  backdropPressBehavior?: 'none' | 'close' | 'collapse';
   children: React.ReactNode;
 };
 
@@ -24,6 +26,8 @@ export function AppBottomSheet({
   title,
   description,
   snapPoints = ['55%', '88%'],
+  enablePanDownToClose = true,
+  backdropPressBehavior = 'close',
   children,
 }: AppBottomSheetProps) {
   const theme = useTheme();
@@ -66,10 +70,10 @@ export function AppBottomSheet({
         {...props}
         appearsOnIndex={0}
         disappearsOnIndex={-1}
-        pressBehavior="close"
+        pressBehavior={backdropPressBehavior}
       />
     ),
-    []
+    [backdropPressBehavior]
   );
 
   const onSheetChange = React.useCallback(
@@ -88,7 +92,7 @@ export function AppBottomSheet({
       ref={bottomSheetRef}
       index={-1}
       snapPoints={memoizedSnapPoints}
-      enablePanDownToClose
+      enablePanDownToClose={enablePanDownToClose}
       onChange={onSheetChange}
       onClose={onSheetClose}
       backdropComponent={renderBackdrop}

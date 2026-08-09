@@ -44,8 +44,9 @@ type AddMaterialFormValue = {
 };
 
 type AddMaterialFormErrors = Partial<Record<keyof AddMaterialFormValue, string>>;
+type StrictSelectOption = Exclude<SelectOption, undefined>;
 
-function toSelectOptions(subjects: Subject[]): SelectOption[] {
+function toSelectOptions(subjects: Subject[]): StrictSelectOption[] {
   return subjects.map((subject) => ({
     value: subject.id,
     label: subject.name,
@@ -140,7 +141,7 @@ export function AddMaterialDialog({
     [subjectsQuery.data?.data]
   );
 
-  const selectedSubject = subjectOptions.find((option) => option.value === values.subjectId) ?? null;
+  const selectedSubject = subjectOptions.find((option) => option.value === values.subjectId);
 
   const createSubjectMutation = useMutation({
     mutationFn: async (name: string) => {
