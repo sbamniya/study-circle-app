@@ -1,3 +1,4 @@
+import { AddMaterialDialog } from '@/components/add-material-dialog';
 import {
   useConfirmDialog,
 } from "@/components/confirm-dialog-provider";
@@ -137,6 +138,7 @@ export default function MaterialsScreen() {
   const queryClient = useQueryClient();
   const confirm = useConfirmDialog();
   const [page, setPage] = React.useState(1);
+  const [showAddDialog, setShowAddDialog] = React.useState(false);
 
   const deleteMaterialMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -147,6 +149,29 @@ export default function MaterialsScreen() {
         queryKey: ["study-materials"],
       });
       void materialsQuery.refetch();
+    },
+  });
+
+  const createMaterialMutation = useMutation({
+    mutationFn: async (payload: {
+      title: string;
+      description?: string;
+      subjectId: string;
+      file: {
+        uri: string;
+        name: string;
+        type: string;
+      };
+    }) => {
+      return studyMaterialsApi.create(token as string, payload);
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: ['study-materials'],
+      });
+      setPage(1);
+      void materialsQuery.refetch();
+      Alert.alert('Success', 'Study material created successfully.');
     },
   });
 
@@ -208,6 +233,19 @@ export default function MaterialsScreen() {
     }
   }
 
+  async function onCreateMaterial(payload: {
+    title: string;
+    description?: string;
+    subjectId: string;
+    file: {
+      uri: string;
+      name: string;
+      type: string;
+    };
+  }) {
+    await createMaterialMutation.mutateAsync(payload);
+  }
+
   return (
     <SafeAreaView className="bg-background flex-1">
       <ScrollView
@@ -254,12 +292,7 @@ export default function MaterialsScreen() {
             </Button>
             <Button
               className="flex-1"
-              onPress={() =>
-                Alert.alert(
-                  "Coming Soon",
-                  "Add Study Material flow will be available in the mobile app soon.",
-                )
-              }
+              onPress={() => setShowAddDialog(true)}
             >
               <Feather name="plus" size={16} color="#000000" />
               <Text>Add Material</Text>
@@ -294,12 +327,7 @@ export default function MaterialsScreen() {
                 <Button
                   size="sm"
                   className="self-start"
-                  onPress={() =>
-                    Alert.alert(
-                      "Coming Soon",
-                      "Upload and manage study materials will be available in the mobile app soon.",
-                    )
-                  }
+                  onPress={() => setShowAddDialog(true)}
                 >
                   <Feather name="plus" size={16} color="#ffffff" />
                   <Text>Upload Material</Text>
@@ -418,6 +446,13 @@ export default function MaterialsScreen() {
           ) : null}
         </View>
       </ScrollView>
+
+      <AddMaterialDialog
+        open={showAddDialog}
+        onOpenChange={setShowAddDialog}
+        onSubmit={onCreateMaterial}
+        submitting={createMaterialMutation.isPending}
+      />
     </SafeAreaView>
   );
 }

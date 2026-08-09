@@ -110,6 +110,23 @@ export type StudyMaterialsResponse = {
   };
 };
 
+export type Subject = {
+  id: string;
+  name: string;
+  description?: string;
+  userId?: string;
+};
+
+export type SubjectsResponse = {
+  data: Subject[];
+  pagination: {
+    totalItems: number;
+    totalPages?: number;
+    page?: number;
+    limit?: number;
+  };
+};
+
 export type DashboardCheckInChartPoint = {
   date: string;
   tasksCompleted: number;
@@ -221,10 +238,16 @@ async function request<T>(
     token?: string | null;
   } = {}
 ) {
+  const isFormData =
+    typeof FormData !== 'undefined' && options.body instanceof FormData;
+
   const headers: Record<string, string> = {
     Accept: 'application/json',
-    'Content-Type': 'application/json',
   };
+
+  if (!isFormData) {
+    headers['Content-Type'] = 'application/json';
+  }
 
   if (options.token) {
     headers.Authorization = `Bearer ${options.token}`;
@@ -233,7 +256,11 @@ async function request<T>(
   const response = await fetch(endpoint(path), {
     method: options.method ?? 'GET',
     headers,
-    body: options.body ? JSON.stringify(options.body) : undefined,
+    body: options.body
+      ? isFormData
+        ? (options.body as FormData)
+        : JSON.stringify(options.body)
+      : undefined,
   });
 
   const text = await response.text();
@@ -373,6 +400,70 @@ export const studyMaterialsApi = {
     return request<MessageResponse | null>(`/study-materials/${id}`, {
       method: 'DELETE',
       token,
+    });
+  },
+  async create(
+    token: string,
+    payload: {
+      title: string;
+      description?: string;
+      subjectId: string;
+      file: {
+        uri: string;
+        name: string;
+        type: string;
+      };
+    }
+  ) {
+    const formData = new FormData();
+    formData.append('title', payload.title);
+    formData.append('description', payload.description ?? '');
+    formData.append('subjectId', payload.subjectId);
+    formData.append('file', payload.file as unknown as Blob);
+
+    return request<StudyMaterial>('/study-materials', {
+      method: 'POST',
+      token,
+      body: formData,
+    });
+  },
+};
+
+export const subjectsApi = {
+  async list(
+    token: string,
+    params: {
+      page: number;
+      limit: number;
+      search?: string;
+    }
+  ) {
+    const query = new URLSearchParams({
+      page: String(params.page),
+      limit: String(params.limit),
+      ...(params.search ? { search: params.search } : {}),
+    }).toString();
+
+    return request<SubjectsResponse>(`/subjects?${query}`, {
+      token,
+    });
+  },
+  async create(
+    token: string,
+    payload: {
+      name: string;
+      description?: string;
+      userId?: string;
+    }
+  ) {
+    return request<Subject>('/subjects', {
+      method: 'POST',
+      token,
+      body: {
+        name: payload.name,
+        description: payload.description ?? '',
+        userId: payload.userId ?? '',
+      },
     });
   },
 };
