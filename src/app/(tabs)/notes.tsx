@@ -1,32 +1,50 @@
-import { AddNoteDialog } from '@/components/add-note-dialog';
-import { useConfirmDialog } from '@/components/confirm-dialog-provider';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { AddNoteDialog } from "@/components/add-note-dialog";
+import { useConfirmDialog } from "@/components/confirm-dialog-provider";
+import { Button } from "@/components/ui/button";
 import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog';
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
-    Select,
-    SelectContent,
-    SelectGroup,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-    type Option as SelectOption,
-} from '@/components/ui/select';
-import { Text } from '@/components/ui/text';
-import { notesApi, subjectsApi, type Note, type Subject } from '@/lib/api';
-import { useAuth } from '@/lib/auth';
-import { Feather } from '@expo/vector-icons';
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import * as React from 'react';
-import { ActivityIndicator, Alert, FlatList, RefreshControl, ScrollView, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  type Option as SelectOption,
+} from "@/components/ui/select";
+import { Text } from "@/components/ui/text";
+import { notesApi, subjectsApi, type Note, type Subject } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
+import { Feather } from "@expo/vector-icons";
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
+import * as React from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  RefreshControl,
+  ScrollView,
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 const PAGE_SIZE = 8;
 
@@ -34,13 +52,13 @@ function formatShortDate(date: string) {
   const parsedDate = new Date(date);
 
   if (Number.isNaN(parsedDate.getTime())) {
-    return 'Unknown date';
+    return "Unknown date";
   }
 
   return parsedDate.toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
+    month: "short",
+    day: "numeric",
+    year: "numeric",
   });
 }
 
@@ -53,30 +71,30 @@ function toSelectOptions(subjects: Subject[]): SelectOption[] {
 
 function decodeHtmlEntities(content: string) {
   return content
-    .replace(/&nbsp;/gi, ' ')
-    .replace(/&amp;/gi, '&')
-    .replace(/&lt;/gi, '<')
-    .replace(/&gt;/gi, '>')
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
     .replace(/&quot;/gi, '"')
     .replace(/&#39;/gi, "'");
 }
 
 function toPlainText(content: string) {
   return decodeHtmlEntities(content)
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/\s+/g, ' ')
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
     .trim();
 }
 
 function toMultilineText(content: string) {
   return decodeHtmlEntities(content)
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<\/(p|div|li|h1|h2|h3|h4|h5|h6)>/gi, '\n')
-    .replace(/<(p|div|li|h1|h2|h3|h4|h5|h6)(\s+[^>]*)?>/gi, '')
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/[ \t]+/g, ' ')
-    .replace(/\n\s+/g, '\n')
-    .replace(/\n{3,}/g, '\n\n')
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/(p|div|li|h1|h2|h3|h4|h5|h6)>/gi, "\n")
+    .replace(/<(p|div|li|h1|h2|h3|h4|h5|h6)(\s+[^>]*)?>/gi, "")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/[ \t]+/g, " ")
+    .replace(/\n\s+/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
     .trim();
 }
 
@@ -94,13 +112,13 @@ export default function NotesScreen() {
   const queryClient = useQueryClient();
   const confirm = useConfirmDialog();
   const [page, setPage] = React.useState(1);
-  const [selectedSubjectId, setSelectedSubjectId] = React.useState('');
+  const [selectedSubjectId, setSelectedSubjectId] = React.useState("");
   const [showNoteDialog, setShowNoteDialog] = React.useState(false);
   const [editingNote, setEditingNote] = React.useState<Note | null>(null);
   const [detailsNote, setDetailsNote] = React.useState<Note | null>(null);
 
   const subjectsQuery = useQuery({
-    queryKey: ['subjects', token],
+    queryKey: ["subjects", token],
     queryFn: async () =>
       subjectsApi.list(token as string, {
         page: 1,
@@ -111,13 +129,14 @@ export default function NotesScreen() {
 
   const subjectOptions = React.useMemo(
     () => toSelectOptions(subjectsQuery.data?.data ?? []),
-    [subjectsQuery.data?.data]
+    [subjectsQuery.data?.data],
   );
 
-  const selectedSubject = subjectOptions.find((option) => option.value === selectedSubjectId) ?? null;
+  const selectedSubject =
+    subjectOptions.find((option) => option?.value === selectedSubjectId) ?? null;
 
   const notesQuery = useQuery({
-    queryKey: ['notes', token, page, PAGE_SIZE, selectedSubjectId],
+    queryKey: ["notes", token, page, PAGE_SIZE, selectedSubjectId],
     queryFn: async () =>
       notesApi.list(token as string, {
         page,
@@ -133,24 +152,28 @@ export default function NotesScreen() {
       return notesApi.create(token as string, payload);
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['notes'] });
+      await queryClient.invalidateQueries({ queryKey: ["notes"] });
       setPage(1);
       void notesQuery.refetch();
-      Alert.alert('Success', 'Note created successfully.');
+      Alert.alert("Success", "Note created successfully.");
     },
   });
 
   const updateNoteMutation = useMutation({
-    mutationFn: async (payload: { id: string; content: string; subjectId: number }) => {
+    mutationFn: async (payload: {
+      id: string;
+      content: string;
+      subjectId: number;
+    }) => {
       return notesApi.update(token as string, payload.id, {
         content: payload.content,
         subjectId: payload.subjectId,
       });
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['notes'] });
+      await queryClient.invalidateQueries({ queryKey: ["notes"] });
       void notesQuery.refetch();
-      Alert.alert('Success', 'Note updated successfully.');
+      Alert.alert("Success", "Note updated successfully.");
     },
   });
 
@@ -159,18 +182,21 @@ export default function NotesScreen() {
       return notesApi.delete(token as string, id);
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['notes'] });
+      await queryClient.invalidateQueries({ queryKey: ["notes"] });
       void notesQuery.refetch();
     },
   });
 
   const notes = notesQuery.data?.data ?? [];
   const totalItems = notesQuery.data?.pagination.totalItems ?? 0;
-  const totalPages = notesQuery.data?.pagination.totalPages ?? Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
+  const totalPages =
+    notesQuery.data?.pagination.totalPages ??
+    Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
   const isRefreshing = notesQuery.isFetching && !notesQuery.isLoading;
 
   const startIndex = totalItems === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
-  const endIndex = totalItems === 0 ? 0 : Math.min(page * PAGE_SIZE, totalItems);
+  const endIndex =
+    totalItems === 0 ? 0 : Math.min(page * PAGE_SIZE, totalItems);
 
   function onRefresh() {
     void notesQuery.refetch();
@@ -200,10 +226,11 @@ export default function NotesScreen() {
 
   async function onDeleteNote(note: Note) {
     const confirmed = await confirm({
-      title: 'Delete Note',
-      description: 'Are you sure you want to delete this note? This action cannot be undone.',
-      confirmText: 'Delete',
-      cancelText: 'Cancel',
+      title: "Delete Note",
+      description:
+        "Are you sure you want to delete this note? This action cannot be undone.",
+      confirmText: "Delete",
+      cancelText: "Cancel",
     });
 
     if (!confirmed) {
@@ -212,11 +239,13 @@ export default function NotesScreen() {
 
     try {
       await deleteNoteMutation.mutateAsync(note.id);
-      Alert.alert('Deleted', 'Note deleted successfully.');
+      Alert.alert("Deleted", "Note deleted successfully.");
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : 'Unable to delete the note right now.';
-      Alert.alert('Delete Failed', message);
+        error instanceof Error
+          ? error.message
+          : "Unable to delete the note right now.";
+      Alert.alert("Delete Failed", message);
     }
   }
 
@@ -232,13 +261,17 @@ export default function NotesScreen() {
     await createNoteMutation.mutateAsync(payload);
   }
 
-  const isSubmitting = createNoteMutation.isPending || updateNoteMutation.isPending;
+  const isSubmitting =
+    createNoteMutation.isPending || updateNoteMutation.isPending;
 
   return (
     <SafeAreaView className="bg-background flex-1">
       <ScrollView
-        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />}
-        contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 20 }}>
+        refreshControl={
+          <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />
+        }
+        contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 20 }}
+      >
         <View className="mx-auto w-full max-w-md gap-4 pb-8">
           <View className="flex-row items-start justify-between">
             <View className="flex-1 pr-3">
@@ -251,7 +284,8 @@ export default function NotesScreen() {
               size="icon"
               variant="outline"
               onPress={onRefresh}
-              disabled={notesQuery.isLoading || notesQuery.isFetching}>
+              disabled={notesQuery.isLoading || notesQuery.isFetching}
+            >
               {notesQuery.isLoading || notesQuery.isFetching ? (
                 <ActivityIndicator size="small" />
               ) : (
@@ -261,28 +295,41 @@ export default function NotesScreen() {
           </View>
 
           <View className="gap-2">
-            <Text className="text-muted-foreground text-xs">Filter by subject</Text>
+            <Text className="text-muted-foreground text-xs">
+              Filter by subject
+            </Text>
             <Select
-              value={selectedSubject}
+              value={selectedSubject!}
               onValueChange={(option) => {
-                setSelectedSubjectId(option?.value ?? '');
+                setSelectedSubjectId(option?.value ?? "");
                 setPage(1);
-              }}>
+              }}
+            >
               <SelectTrigger>
                 <SelectValue
-                  placeholder={subjectsQuery.isLoading ? 'Loading subjects...' : 'All subjects'}
+                  placeholder={
+                    subjectsQuery.isLoading
+                      ? "Loading subjects..."
+                      : "All subjects"
+                  }
                 />
               </SelectTrigger>
               <SelectContent>
                 <SelectGroup>
                   {subjectOptions.map((subject) => (
-                    <SelectItem key={subject.value} value={subject.value} label={subject.label} />
+                    <SelectItem
+                      key={subject?.value}
+                      value={subject?.value!}
+                      label={subject?.label!}
+                    />
                   ))}
                 </SelectGroup>
               </SelectContent>
             </Select>
             {subjectsQuery.isError ? (
-              <Text className="text-destructive text-xs">Failed to load subjects for filtering.</Text>
+              <Text className="text-destructive text-xs">
+                Failed to load subjects for filtering.
+              </Text>
             ) : null}
           </View>
 
@@ -291,10 +338,11 @@ export default function NotesScreen() {
               className="flex-1"
               variant="outline"
               onPress={() => {
-                setSelectedSubjectId('');
+                setSelectedSubjectId("");
                 setPage(1);
               }}
-              disabled={!selectedSubjectId}>
+              disabled={!selectedSubjectId}
+            >
               <Feather name="x-circle" size={16} color="#a3a3a3" />
               <Text>Clear Filter</Text>
             </Button>
@@ -326,7 +374,11 @@ export default function NotesScreen() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="px-4">
-                <Button size="sm" className="self-start" onPress={onStartCreateNote}>
+                <Button
+                  size="sm"
+                  className="self-start"
+                  onPress={onStartCreateNote}
+                >
                   <Feather name="plus" size={16} color="#ffffff" />
                   <Text>Add Note</Text>
                 </Button>
@@ -345,8 +397,11 @@ export default function NotesScreen() {
                   <Card className="gap-3 py-4">
                     <CardHeader className="gap-2 px-4">
                       <View className="flex-row items-start justify-between gap-2">
-                        <CardTitle className="text-base flex-1" numberOfLines={2}>
-                          {item.subject?.name ?? 'General'}
+                        <CardTitle
+                          className="text-base flex-1"
+                          numberOfLines={2}
+                        >
+                          {item.subject?.name ?? "General"}
                         </CardTitle>
                         <View className="flex-row gap-1">
                           <Button
@@ -354,15 +409,25 @@ export default function NotesScreen() {
                             variant="outline"
                             className="h-9 w-9"
                             onPress={() => onOpenNoteDetails(item)}
-                            disabled={isSubmitting || deleteNoteMutation.isPending}>
-                            <Feather name="more-horizontal" size={14} color="#a3a3a3" />
+                            disabled={
+                              isSubmitting || deleteNoteMutation.isPending
+                            }
+                          >
+                            <Feather
+                              name="more-horizontal"
+                              size={14}
+                              color="#a3a3a3"
+                            />
                           </Button>
                           <Button
                             size="icon"
                             variant="outline"
                             className="h-9 w-9"
                             onPress={() => onStartEditNote(item)}
-                            disabled={isSubmitting || deleteNoteMutation.isPending}>
+                            disabled={
+                              isSubmitting || deleteNoteMutation.isPending
+                            }
+                          >
                             <Feather name="edit-2" size={14} color="#a3a3a3" />
                           </Button>
                           <Button
@@ -370,37 +435,55 @@ export default function NotesScreen() {
                             variant="destructive"
                             className="h-9 w-9"
                             onPress={() => onDeleteNote(item)}
-                            disabled={isSubmitting || deleteNoteMutation.isPending}>
+                            disabled={
+                              isSubmitting || deleteNoteMutation.isPending
+                            }
+                          >
                             {deleteNoteMutation.isPending ? (
                               <ActivityIndicator size="small" color="#ffffff" />
                             ) : (
-                              <Feather name="trash-2" size={14} color="#ffffff" />
+                              <Feather
+                                name="trash-2"
+                                size={14}
+                                color="#ffffff"
+                              />
                             )}
                           </Button>
                         </View>
                       </View>
-                      <CardDescription numberOfLines={6}>{toPlainText(item.content)}</CardDescription>
+                      <CardDescription numberOfLines={6}>
+                        {toPlainText(item.content)}
+                      </CardDescription>
                     </CardHeader>
 
                     <CardContent className="gap-2 px-4">
                       <View className="gap-1">
-                        <Text className="text-muted-foreground text-xs">Subject</Text>
+                        <Text className="text-muted-foreground text-xs">
+                          Subject
+                        </Text>
                         <Text className="text-sm font-medium" numberOfLines={1}>
-                          {item.subject?.name ?? 'N/A'}
+                          {item.subject?.name ?? "N/A"}
                         </Text>
                       </View>
 
                       <View className="flex-row flex-wrap gap-1">
                         <View className="bg-muted rounded-full px-2 py-1">
-                          <Text className="text-xs">Words: {countWords(item.content)}</Text>
+                          <Text className="text-xs">
+                            Words: {countWords(item.content)}
+                          </Text>
                         </View>
                         <View className="rounded-full bg-orange-100 px-2 py-1">
                           <Text className="text-xs text-orange-700">
-                            Type: {item.type === 'GENERATED' ? 'AI Generated' : 'Custom'}
+                            Type:{" "}
+                            {item.type === "GENERATED"
+                              ? "AI Generated"
+                              : "Custom"}
                           </Text>
                         </View>
                         <View className="rounded-full bg-blue-100 px-2 py-1">
-                          <Text className="text-xs text-blue-700">Created: {formatShortDate(item.createdAt)}</Text>
+                          <Text className="text-xs text-blue-700">
+                            Created: {formatShortDate(item.createdAt)}
+                          </Text>
                         </View>
                       </View>
                     </CardContent>
@@ -421,7 +504,8 @@ export default function NotesScreen() {
                     variant="outline"
                     className="flex-1"
                     onPress={onPreviousPage}
-                    disabled={page <= 1 || notesQuery.isFetching}>
+                    disabled={page <= 1 || notesQuery.isFetching}
+                  >
                     <Feather name="chevron-left" size={16} color="#a3a3a3" />
                     <Text>Previous</Text>
                   </Button>
@@ -430,7 +514,8 @@ export default function NotesScreen() {
                     variant="outline"
                     className="flex-1"
                     onPress={onNextPage}
-                    disabled={page >= totalPages || notesQuery.isFetching}>
+                    disabled={page >= totalPages || notesQuery.isFetching}
+                  >
                     <Text>Next</Text>
                     <Feather name="chevron-right" size={16} color="#a3a3a3" />
                   </Button>
@@ -442,7 +527,7 @@ export default function NotesScreen() {
       </ScrollView>
 
       <AddNoteDialog
-        key={editingNote?.id ?? 'create'}
+        key={editingNote?.id ?? "create"}
         open={showNoteDialog}
         onOpenChange={(open) => {
           setShowNoteDialog(open);
@@ -461,49 +546,63 @@ export default function NotesScreen() {
           if (!open) {
             setDetailsNote(null);
           }
-        }}>
+        }}
+      >
         <DialogContent className="max-h-[88%] w-[92%] max-w-md rounded-2xl">
           <DialogHeader>
             <DialogTitle>Note Details</DialogTitle>
             <DialogDescription>
               {detailsNote
-                ? `Subject: ${detailsNote.subject?.name ?? 'N/A'} • Created: ${formatShortDate(detailsNote.createdAt)}`
-                : 'Full note content and metadata.'}
+                ? `Subject: ${detailsNote.subject?.name ?? "N/A"} • Created: ${formatShortDate(detailsNote.createdAt)}`
+                : "Full note content and metadata."}
             </DialogDescription>
           </DialogHeader>
 
-          <ScrollView className="max-h-[62vh]" contentContainerStyle={{ gap: 12, paddingBottom: 8 }}>
+          <ScrollView
+            className="max-h-[62vh]"
+            contentContainerStyle={{ gap: 12, paddingBottom: 8 }}
+          >
             <View className="gap-1">
               <Text className="text-muted-foreground text-xs">Content</Text>
-              <Text className="text-sm leading-6">{detailsNote ? toMultilineText(detailsNote.content) : ''}</Text>
+              <Text className="text-sm leading-6">
+                {detailsNote ? toMultilineText(detailsNote.content) : ""}
+              </Text>
             </View>
 
             <View className="gap-1">
               <Text className="text-muted-foreground text-xs">Subject</Text>
-              <Text className="text-sm font-medium">{detailsNote?.subject?.name ?? 'N/A'}</Text>
+              <Text className="text-sm font-medium">
+                {detailsNote?.subject?.name ?? "N/A"}
+              </Text>
             </View>
 
             <View className="flex-row flex-wrap gap-1">
               <View className="bg-muted rounded-full px-2 py-1">
-                <Text className="text-xs">Words: {detailsNote ? countWords(detailsNote.content) : 0}</Text>
+                <Text className="text-xs">
+                  Words: {detailsNote ? countWords(detailsNote.content) : 0}
+                </Text>
               </View>
               <View className="rounded-full bg-orange-100 px-2 py-1">
                 <Text className="text-xs text-orange-700">
-                  Type: {detailsNote?.type === 'GENERATED' ? 'AI Generated' : 'Custom'}
+                  Type:{" "}
+                  {detailsNote?.type === "GENERATED"
+                    ? "AI Generated"
+                    : "Custom"}
                 </Text>
               </View>
               <View className="rounded-full bg-blue-100 px-2 py-1">
                 <Text className="text-xs text-blue-700">
-                  Created: {detailsNote ? formatShortDate(detailsNote.createdAt) : 'Unknown date'}
+                  Created:{" "}
+                  {detailsNote
+                    ? formatShortDate(detailsNote.createdAt)
+                    : "Unknown date"}
                 </Text>
               </View>
             </View>
           </ScrollView>
 
           <DialogFooter>
-            <Button
-              variant="outline"
-              onPress={() => setDetailsNote(null)}>
+            <Button variant="outline" onPress={() => setDetailsNote(null)}>
               <Text>Close</Text>
             </Button>
           </DialogFooter>
