@@ -1,5 +1,9 @@
 import { AddNoteDialog } from "@/components/add-note-dialog";
 import { useConfirmDialog } from "@/components/confirm-dialog-provider";
+import {
+  AppBottomSheet,
+  AppBottomSheetScrollView,
+} from "@/components/ui/app-bottom-sheet";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -8,14 +12,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -540,74 +536,62 @@ export default function NotesScreen() {
         submitting={isSubmitting}
       />
 
-      <Dialog
+      <AppBottomSheet
         open={Boolean(detailsNote)}
         onOpenChange={(open) => {
           if (!open) {
             setDetailsNote(null);
           }
         }}
+        title="Note Details"
+        description={
+          detailsNote
+            ? `Subject: ${detailsNote.subject?.name ?? "N/A"} • Created: ${formatShortDate(detailsNote.createdAt)}`
+            : "Full note content and metadata."
+        }
       >
-        <DialogContent className="max-h-[88%] w-[92%] max-w-md rounded-2xl">
-          <DialogHeader>
-            <DialogTitle>Note Details</DialogTitle>
-            <DialogDescription>
-              {detailsNote
-                ? `Subject: ${detailsNote.subject?.name ?? "N/A"} • Created: ${formatShortDate(detailsNote.createdAt)}`
-                : "Full note content and metadata."}
-            </DialogDescription>
-          </DialogHeader>
+        <AppBottomSheetScrollView
+          contentContainerStyle={{ gap: 12, paddingBottom: 8 }}
+        >
+          <View className="gap-1">
+            <Text className="text-muted-foreground text-xs">Content</Text>
+            <Text className="text-sm leading-6">
+              {detailsNote ? toMultilineText(detailsNote.content) : ""}
+            </Text>
+          </View>
 
-          <ScrollView
-            className="max-h-[62vh]"
-            contentContainerStyle={{ gap: 12, paddingBottom: 8 }}
-          >
-            <View className="gap-1">
-              <Text className="text-muted-foreground text-xs">Content</Text>
-              <Text className="text-sm leading-6">
-                {detailsNote ? toMultilineText(detailsNote.content) : ""}
+          <View className="gap-1">
+            <Text className="text-muted-foreground text-xs">Subject</Text>
+            <Text className="text-sm font-medium">
+              {detailsNote?.subject?.name ?? "N/A"}
+            </Text>
+          </View>
+
+          <View className="flex-row flex-wrap gap-1">
+            <View className="bg-muted rounded-full px-2 py-1">
+              <Text className="text-xs">
+                Words: {detailsNote ? countWords(detailsNote.content) : 0}
               </Text>
             </View>
-
-            <View className="gap-1">
-              <Text className="text-muted-foreground text-xs">Subject</Text>
-              <Text className="text-sm font-medium">
-                {detailsNote?.subject?.name ?? "N/A"}
+            <View className="bg-muted rounded-full px-2 py-1">
+              <Text className="text-xs text-muted-foreground">
+                Type: {detailsNote?.type === "GENERATED" ? "AI Generated" : "Custom"}
               </Text>
             </View>
-
-            <View className="flex-row flex-wrap gap-1">
-              <View className="bg-muted rounded-full px-2 py-1">
-                <Text className="text-xs">
-                  Words: {detailsNote ? countWords(detailsNote.content) : 0}
-                </Text>
-              </View>
-              <View className="rounded-full bg-orange-100 px-2 py-1">
-                <Text className="text-xs text-orange-700">
-                  Type:{" "}
-                  {detailsNote?.type === "GENERATED"
-                    ? "AI Generated"
-                    : "Custom"}
-                </Text>
-              </View>
-              <View className="rounded-full bg-blue-100 px-2 py-1">
-                <Text className="text-xs text-blue-700">
-                  Created:{" "}
-                  {detailsNote
-                    ? formatShortDate(detailsNote.createdAt)
-                    : "Unknown date"}
-                </Text>
-              </View>
+            <View className="bg-muted rounded-full px-2 py-1">
+              <Text className="text-xs text-muted-foreground">
+                Created: {detailsNote ? formatShortDate(detailsNote.createdAt) : "Unknown date"}
+              </Text>
             </View>
-          </ScrollView>
+          </View>
+        </AppBottomSheetScrollView>
 
-          <DialogFooter>
-            <Button variant="outline" onPress={() => setDetailsNote(null)}>
-              <Text>Close</Text>
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        <View className="pt-2">
+          <Button variant="outline" onPress={() => setDetailsNote(null)}>
+            <Text>Close</Text>
+          </Button>
+        </View>
+      </AppBottomSheet>
     </SafeAreaView>
   );
 }

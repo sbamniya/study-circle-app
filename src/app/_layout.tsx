@@ -9,6 +9,7 @@ import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect, useState } from "react";
 import { useColorScheme, useWindowDimensions } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Uniwind } from "uniwind";
 
@@ -88,26 +89,28 @@ export default function RootLayout() {
   }, [colorScheme]);
 
   return (
-    <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
-      <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <ConfirmDialogProvider>
-            <AnimatedSplashOverlay />
-            <SafeAreaView
-              className="bg-background flex-1"
-              style={{
-                height,
-              }}
-            >
-              <Stack screenOptions={{ headerShown: false }}>
-                <Stack.Screen name="(auth)" />
-                <Stack.Screen name="(tabs)" />
-              </Stack>
-              <PortalHost />
-            </SafeAreaView>
-          </ConfirmDialogProvider>
-        </AuthProvider>
-      </QueryClientProvider>
-    </ThemeProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
+        <QueryClientProvider client={queryClient}>
+          <AuthProvider>
+            <ConfirmDialogProvider>
+              <AnimatedSplashOverlay />
+              <SafeAreaView
+                className="bg-background flex-1"
+                style={{
+                  height,
+                }}
+              >
+                <Stack screenOptions={{ headerShown: false }}>
+                  <Stack.Screen name="(auth)" />
+                  <Stack.Screen name="(tabs)" />
+                </Stack>
+                <PortalHost />
+              </SafeAreaView>
+            </ConfirmDialogProvider>
+          </AuthProvider>
+        </QueryClientProvider>
+      </ThemeProvider>
+    </GestureHandlerRootView>
   );
 }
